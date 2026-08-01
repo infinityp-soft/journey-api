@@ -1,0 +1,562 @@
+// Journey Education Admin CMS — Prisma schema
+// PostgreSQL. Bilingual (*_en / *_th) content, media on a volume (metadata only
+// here), and every image field is an optional FK to media_assets with
+// onDelete: SetNull. Snake_case tables/columns via @map / @@map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums (values match the string literals used across the app)
+// ---------------------------------------------------------------------------
+enum UserRole {
+  admin
+  editor
+  viewer
+}
+
+enum PublishStatus {
+  draft
+  pending
+  published
+  archived
+}
+
+enum StaffStatus {
+  active
+  on_leave
+  inactive
+}
+
+enum SimpleStatus {
+  active
+  inactive
+}
+
+enum ReviewStatus {
+  pending
+  published
+  hidden
+}
+
+enum EventFormat {
+  online
+  offline
+}
+
+enum EventStatus {
+  draft
+  scheduled
+  active
+  completed
+  cancelled
+}
+
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  converted
+  closed
+}
+
+enum LeadTopic {
+  international_undergraduate
+  postgraduate_programs
+  scholarship_inquiry
+  visa_assistance
+  other
+}
+
+enum SocialPlatform {
+  facebook
+  instagram
+  line
+  youtube
+  tiktok
+  twitter
+  linkedin
+  other
+}
+
+enum FormFieldType {
+  text
+  email
+  phone
+  select
+  textarea
+  date
+  number
+  checkbox
+}
+
+// ---------------------------------------------------------------------------
+// Media (files live on the volume; only metadata is stored here)
+// ---------------------------------------------------------------------------
+model MediaAsset {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storageKey       String  @unique @map("storage_key")
+  originalFilename String  @map("original_filename")
+  mimeType         String  @map("mime_type")
+  sizeBytes        Int     @map("size_bytes")
+  width            Int?
+  height           Int?
+  altText          String? @map("alt_text")
+  checksumSha256   String? @map("checksum_sha256") @db.Char(64)
+  uploadedById     String? @map("uploaded_by") @db.Uuid
+  uploadedBy       User?   @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Back-relations (every place an image can be referenced)
+  avatarUsers          User[]              @relation("UserAvatar")
+  bannerImages         Banner[]
+  staffPhotos          StaffMember[]
+  destinationCovers    Destination[]
+  aboutHeaders         AboutUs[]
+  articleFeatured      Article[]
+  visaHeaders          VisaService[]
+  testimonialPortraits Testimonial[]
+  videoThumbnails      Video[]
+  videoPageHeaders     VideoPageSettings[]
+  eventCovers          Event[]
+  siteContactCovers    SiteSettings[]      @relation("SiteContactCover")
+  siteLogos            SiteSettings[]      @relation("SiteLogo")
+
+  @@map("media_assets")
+}
+
+// ---------------------------------------------------------------------------
+// Users, auth & activity
+// ---------------------------------------------------------------------------
+model User {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(viewer)
+  avatarId     String?   @map("avatar_id") @db.Uuid
+  avatar       MediaAsset? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  uploadedMedia MediaAsset[]   @relation("MediaUploader")
+  refreshTokens RefreshToken[]
+  activityLogs  ActivityLog[]
+  articles      Article[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address") @db.Inet
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model ActivityLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  summary    String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Banners
+// ---------------------------------------------------------------------------
+model Banner {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  linkUrl   String?     @map("link_url")
+  imageId   String?     @map("image_id") @db.Uuid
+  image     MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  isActive  Boolean     @default(true) @map("is_active")
+  sortOrder Int         @default(0) @map("sort_order")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([sortOrder])
+  @@map("banners")
+}
+
+// ---------------------------------------------------------------------------
+// About Us (singleton) + highlights
+// ---------------------------------------------------------------------------
+model AboutUs {
+  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyTitleEn    String?     @map("company_title_en")
+  companyTitleTh    String?     @map("company_title_th")
+  bioEn             String?     @map("bio_en")
+  bioTh             String?     @map("bio_th")
+  teamPageTitleEn   String?     @map("team_page_title_en")
+  teamPageTitleTh   String?     @map("team_page_title_th")
+  teamHeaderImageId String?     @map("team_header_image_id") @db.Uuid
+  teamHeaderImage   MediaAsset? @relation(fields: [teamHeaderImageId], references: [id], onDelete: SetNull)
+  isSingleton       Boolean     @unique @default(true) @map("is_singleton")
+  highlights        AboutHighlight[]
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("about_us")
+}
+
+model AboutHighlight {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aboutUsId     String   @map("about_us_id") @db.Uuid
+  aboutUs       AboutUs  @relation(fields: [aboutUsId], references: [id], onDelete: Cascade)
+  titleEn       String?  @map("title_en")
+  titleTh       String?  @map("title_th")
+  descriptionEn String?  @map("description_en")
+  descriptionTh String?  @map("description_th")
+  isEnabled     Boolean  @default(true) @map("is_enabled")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([aboutUsId])
+  @@map("about_highlights")
+}
+
+// ---------------------------------------------------------------------------
+// Staff
+// ---------------------------------------------------------------------------
+model StaffMember {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullNameEn String      @map("full_name_en")
+  fullNameTh String?     @map("full_name_th")
+  positionEn String?     @map("position_en")
+  positionTh String?     @map("position_th")
+  email      String?
+  phone      String?
+  photoId    String?     @map("photo_id") @db.Uuid
+  photo      MediaAsset? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  status     StaffStatus @default(active)
+  isVisible  Boolean     @default(true) @map("is_visible")
+  sortOrder  Int         @default(0) @map("sort_order")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  testimonials Testimonial[]
+
+  @@index([status])
+  @@index([sortOrder])
+  @@map("staff_members")
+}
+
+// ---------------------------------------------------------------------------
+// Destinations
+// ---------------------------------------------------------------------------
+model Destination {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameEn       String        @map("name_en")
+  nameTh       String?       @map("name_th")
+  shortDescEn  String?       @map("short_desc_en")
+  shortDescTh  String?       @map("short_desc_th")
+  contentEn    String?       @map("content_en")
+  contentTh    String?       @map("content_th")
+  coverImageId String?       @map("cover_image_id") @db.Uuid
+  coverImage   MediaAsset?   @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+  status       PublishStatus @default(draft)
+  sortOrder    Int           @default(0) @map("sort_order")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@index([sortOrder])
+  @@map("destinations")
+}
+
+// ---------------------------------------------------------------------------
+// Articles + categories
+// ---------------------------------------------------------------------------
+model ArticleCategory {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameEn    String    @map("name_en")
+  nameTh    String?   @map("name_th")
+  slug      String    @unique
+  color     String?
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  articles Article[]
+
+  @@map("article_categories")
+}
+
+model Article {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titleEn         String           @map("title_en")
+  titleTh         String?          @map("title_th")
+  slug            String           @unique
+  excerptEn       String?          @map("excerpt_en")
+  excerptTh       String?          @map("excerpt_th")
+  contentEn       String?          @map("content_en")
+  contentTh       String?          @map("content_th")
+  categoryId      String?          @map("category_id") @db.Uuid
+  category        ArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  authorId        String?          @map("author_id") @db.Uuid
+  author          User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName      String?          @map("author_name")
+  featuredImageId String?          @map("featured_image_id") @db.Uuid
+  featuredImage   MediaAsset?      @relation(fields: [featuredImageId], references: [id], onDelete: SetNull)
+  status          PublishStatus    @default(draft)
+  isVisible       Boolean          @default(true) @map("is_visible")
+  readTimeMinutes Int?             @map("read_time_minutes")
+  seoTitle        String?          @map("seo_title")
+  seoDescription  String?          @map("seo_description")
+  publishedAt     DateTime?        @map("published_at") @db.Timestamptz(6)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([publishedAt])
+  @@map("articles")
+}
+
+// ---------------------------------------------------------------------------
+// Visa services + document checklist
+// ---------------------------------------------------------------------------
+model VisaService {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  country         String?
+  descriptionHtml String?      @map("description_html")
+  headerImageId   String?      @map("header_image_id") @db.Uuid
+  headerImage     MediaAsset?  @relation(fields: [headerImageId], references: [id], onDelete: SetNull)
+  status          SimpleStatus @default(active)
+  sortOrder       Int          @default(0) @map("sort_order")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  documents VisaDocument[]
+
+  @@index([sortOrder])
+  @@map("visa_services")
+}
+
+model VisaDocument {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  visaServiceId String      @map("visa_service_id") @db.Uuid
+  visaService   VisaService @relation(fields: [visaServiceId], references: [id], onDelete: Cascade)
+  label         String
+  sortOrder     Int         @default(0) @map("sort_order")
+
+  @@index([visaServiceId])
+  @@map("visa_documents")
+}
+
+// ---------------------------------------------------------------------------
+// Testimonials
+// ---------------------------------------------------------------------------
+model Testimonial {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentNameEn   String       @map("student_name_en")
+  studentNameTh   String?      @map("student_name_th")
+  locationEn      String?      @map("location_en")
+  locationTh      String?      @map("location_th")
+  counselorId     String?      @map("counselor_id") @db.Uuid
+  counselor       StaffMember? @relation(fields: [counselorId], references: [id], onDelete: SetNull)
+  contentEn       String?      @map("content_en")
+  contentTh       String?      @map("content_th")
+  rating          Int?         @db.SmallInt
+  portraitImageId String?      @map("portrait_image_id") @db.Uuid
+  portraitImage   MediaAsset?  @relation(fields: [portraitImageId], references: [id], onDelete: SetNull)
+  status          ReviewStatus @default(pending)
+  isFeatured      Boolean      @default(false) @map("is_featured")
+  sortOrder       Int          @default(0) @map("sort_order")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@map("testimonials")
+}
+
+// ---------------------------------------------------------------------------
+// Videos (page settings singleton + list)
+// ---------------------------------------------------------------------------
+model VideoPageSettings {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageTitleEn   String?     @map("page_title_en")
+  pageTitleTh   String?     @map("page_title_th")
+  headerImageId String?     @map("header_image_id") @db.Uuid
+  headerImage   MediaAsset? @relation(fields: [headerImageId], references: [id], onDelete: SetNull)
+  isSingleton   Boolean     @unique @default(true) @map("is_singleton")
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("video_page_settings")
+}
+
+model Video {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titleEn     String?       @map("title_en")
+  titleTh     String?       @map("title_th")
+  youtubeUrl  String        @map("youtube_url")
+  thumbnailId String?       @map("thumbnail_id") @db.Uuid
+  thumbnail   MediaAsset?   @relation(fields: [thumbnailId], references: [id], onDelete: SetNull)
+  status      PublishStatus @default(published)
+  sortOrder   Int           @default(0) @map("sort_order")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([sortOrder])
+  @@map("videos")
+}
+
+// ---------------------------------------------------------------------------
+// Events + form fields + registrations
+// ---------------------------------------------------------------------------
+model Event {
+  id                      String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nameEn                  String      @map("name_en")
+  nameTh                  String?     @map("name_th")
+  format                  EventFormat @default(online)
+  venueEn                 String?     @map("venue_en")
+  venueTh                 String?     @map("venue_th")
+  onlineUrl               String?     @map("online_url")
+  maxRegistrants          Int?        @map("max_registrants")
+  descriptionEn           String?     @map("description_en")
+  descriptionTh           String?     @map("description_th")
+  coverImageId            String?     @map("cover_image_id") @db.Uuid
+  coverImage              MediaAsset? @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+  eventStartAt            DateTime?   @map("event_start_at") @db.Timestamptz(6)
+  eventEndAt              DateTime?   @map("event_end_at") @db.Timestamptz(6)
+  registrationOpenAt      DateTime?   @map("registration_open_at") @db.Timestamptz(6)
+  registrationCloseAt     DateTime?   @map("registration_close_at") @db.Timestamptz(6)
+  registrationFormEnabled Boolean     @default(true) @map("registration_form_enabled")
+  status                  EventStatus @default(draft)
+  createdAt               DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  formFields    EventFormField[]
+  registrations EventRegistration[]
+
+  @@index([status])
+  @@index([eventStartAt])
+  @@map("events")
+}
+
+model EventFormField {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId    String        @map("event_id") @db.Uuid
+  event      Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  labelEn    String        @map("label_en")
+  labelTh    String?       @map("label_th")
+  fieldType  FormFieldType @default(text) @map("field_type")
+  options    Json?
+  isRequired Boolean       @default(false) @map("is_required")
+  sortOrder  Int           @default(0) @map("sort_order")
+
+  @@index([eventId])
+  @@map("event_form_fields")
+}
+
+model EventRegistration {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId        String   @map("event_id") @db.Uuid
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  firstName      String   @map("first_name")
+  lastName       String?  @map("last_name")
+  email          String?
+  phone          String?
+  areaOfInterest String?  @map("area_of_interest")
+  answers        Json     @default("{}")
+  registeredAt   DateTime @default(now()) @map("registered_at") @db.Timestamptz(6)
+
+  @@index([eventId])
+  @@index([email])
+  @@map("event_registrations")
+}
+
+// ---------------------------------------------------------------------------
+// Leads
+// ---------------------------------------------------------------------------
+model Lead {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadCode        String?    @unique @map("lead_code")
+  fullName        String     @map("full_name")
+  email           String?
+  phone           String?
+  interestCountry String?    @map("interest_country")
+  plannedYear     Int?       @map("planned_year")
+  duration        String?
+  degreeLevel     String?    @map("degree_level")
+  topic           LeadTopic  @default(other)
+  status          LeadStatus @default(new)
+  notes           String?
+  submittedAt     DateTime   @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@index([topic])
+  @@index([submittedAt])
+  @@map("leads")
+}
+
+// ---------------------------------------------------------------------------
+// Global settings (singleton) + social links
+// ---------------------------------------------------------------------------
+model SiteSettings {
+  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contactCoverImageId   String?     @map("contact_cover_image_id") @db.Uuid
+  contactCoverImage     MediaAsset? @relation("SiteContactCover", fields: [contactCoverImageId], references: [id], onDelete: SetNull)
+  contactTitleEn        String?     @map("contact_title_en")
+  contactTitleTh        String?     @map("contact_title_th")
+  addressEn             String?     @map("address_en")
+  addressTh             String?     @map("address_th")
+  primaryPhone          String?     @map("primary_phone")
+  inquiryEmail          String?     @map("inquiry_email")
+  googleMapLink         String?     @map("google_map_link")
+  logoId                String?     @map("logo_id") @db.Uuid
+  logo                  MediaAsset? @relation("SiteLogo", fields: [logoId], references: [id], onDelete: SetNull)
+  footerBioEn           String?     @map("footer_bio_en")
+  footerBioTh           String?     @map("footer_bio_th")
+  defaultSeoTitle       String?     @map("default_seo_title")
+  defaultSeoDescription String?     @map("default_seo_description")
+  // Dashboard "Site Visits" counter (public site can increment).
+  siteVisits            Int         @default(0) @map("site_visits")
+  isSingleton           Boolean     @unique @default(true) @map("is_singleton")
+  updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("site_settings")
+}
+
+model SocialLink {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform  SocialPlatform
+  url       String
+  isActive  Boolean        @default(true) @map("is_active")
+  sortOrder Int            @default(0) @map("sort_order")
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([sortOrder])
+  @@map("social_links")
+}
