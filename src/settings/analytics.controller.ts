@@ -1,5 +1,6 @@
 import { Controller, HttpCode, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SiteVisitsResponseDto } from './dto/analytics-response.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { SettingsService } from '../settings/settings.service';
 
@@ -16,6 +17,7 @@ export class AnalyticsController {
   @Post('visit')
   @HttpCode(200)
   @ApiOperation({ summary: 'Increment site visit counter (public)' })
+  @ApiOkResponse({ type: SiteVisitsResponseDto })
   recordVisit() {
     return this.settings.incrementSiteVisits(1);
   }

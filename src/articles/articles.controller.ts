@@ -11,12 +11,20 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import { ArticleCategoriesService } from './article-categories.service';
 import { ArticlesService } from './articles.service';
@@ -26,6 +34,10 @@ import {
   UpdateArticleCategoryDto,
   UpdateArticleDto,
 } from './dto/article.dto';
+import {
+  ArticleCategoryResponseDto,
+  ArticleResponseDto,
+} from './dto/article-response.dto';
 
 @ApiTags('articles')
 @ApiBearerAuth('access-token')
@@ -41,6 +53,7 @@ export class ArticlesController {
   @Post('article-categories')
   @CheckPolicies(can(Action.Create, 'ArticleCategory'))
   @ApiOperation({ summary: 'Create an article category' })
+  @ApiCreatedResponse({ type: ArticleCategoryResponseDto })
   createCategory(@Body() dto: CreateArticleCategoryDto) {
     return this.categories.create(dto);
   }
@@ -48,6 +61,7 @@ export class ArticlesController {
   @Get('article-categories')
   @CheckPolicies(can(Action.Read, 'ArticleCategory'))
   @ApiOperation({ summary: 'List article categories' })
+  @ApiPaginatedOkResponse(ArticleCategoryResponseDto)
   findCategories(@Query() query: PaginationQueryDto) {
     return this.categories.findAll(query);
   }
@@ -56,6 +70,7 @@ export class ArticlesController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Update, 'ArticleCategory'))
   @ApiOperation({ summary: 'Reorder article categories' })
+  @ApiNoContentResponse()
   async reorderCategories(@Body() dto: ReorderDto) {
     await this.categories.reorder(dto.items);
   }
@@ -63,6 +78,7 @@ export class ArticlesController {
   @Patch('article-categories/:id')
   @CheckPolicies(can(Action.Update, 'ArticleCategory'))
   @ApiOperation({ summary: 'Update an article category' })
+  @ApiOkResponse({ type: ArticleCategoryResponseDto })
   updateCategory(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateArticleCategoryDto,
@@ -74,6 +90,7 @@ export class ArticlesController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'ArticleCategory'))
   @ApiOperation({ summary: 'Delete an article category' })
+  @ApiNoContentResponse()
   removeCategory(@Param('id', ParseUUIDPipe) id: string) {
     return this.categories.remove(id);
   }
@@ -82,6 +99,7 @@ export class ArticlesController {
   @Post('articles')
   @CheckPolicies(can(Action.Create, 'Article'))
   @ApiOperation({ summary: 'Create an article' })
+  @ApiCreatedResponse({ type: ArticleResponseDto })
   create(@Body() dto: CreateArticleDto) {
     return this.articles.create(dto);
   }
@@ -89,6 +107,7 @@ export class ArticlesController {
   @Get('articles')
   @CheckPolicies(can(Action.Read, 'Article'))
   @ApiOperation({ summary: 'List articles' })
+  @ApiPaginatedOkResponse(ArticleResponseDto)
   findAll(@Query() query: PaginationQueryDto) {
     return this.articles.findAll(query);
   }
@@ -96,6 +115,7 @@ export class ArticlesController {
   @Get('articles/:id')
   @CheckPolicies(can(Action.Read, 'Article'))
   @ApiOperation({ summary: 'Get an article by ID' })
+  @ApiOkResponse({ type: ArticleResponseDto })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.articles.findOne(id);
   }
@@ -103,6 +123,7 @@ export class ArticlesController {
   @Patch('articles/:id')
   @CheckPolicies(can(Action.Update, 'Article'))
   @ApiOperation({ summary: 'Update an article' })
+  @ApiOkResponse({ type: ArticleResponseDto })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateArticleDto,
@@ -114,6 +135,7 @@ export class ArticlesController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'Article'))
   @ApiOperation({ summary: 'Delete an article' })
+  @ApiNoContentResponse()
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.articles.remove(id);
   }

@@ -34,7 +34,11 @@ export class ActivityLogsService {
     const limit = query.limit ?? 20;
     const [data, total] = await Promise.all([
       this.prisma.activityLog.findMany({
-        include: { user: true },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,

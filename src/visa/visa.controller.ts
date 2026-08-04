@@ -11,13 +11,22 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CreateVisaServiceDto, UpdateVisaServiceDto } from './dto/visa.dto';
+import { VisaServiceResponseDto } from './dto/visa-response.dto';
 import { VisaService } from './visa.service';
 
 @ApiTags('visa')
@@ -30,6 +39,7 @@ export class VisaController {
   @Post()
   @CheckPolicies(can(Action.Create, 'VisaService'))
   @ApiOperation({ summary: 'Create a visa service' })
+  @ApiCreatedResponse({ type: VisaServiceResponseDto })
   create(@Body() dto: CreateVisaServiceDto) {
     return this.service.create(dto);
   }
@@ -37,6 +47,7 @@ export class VisaController {
   @Get()
   @CheckPolicies(can(Action.Read, 'VisaService'))
   @ApiOperation({ summary: 'List visa services' })
+  @ApiPaginatedOkResponse(VisaServiceResponseDto)
   findAll(@Query() query: PaginationQueryDto) {
     return this.service.findAll(query);
   }
@@ -44,6 +55,7 @@ export class VisaController {
   @Get(':id')
   @CheckPolicies(can(Action.Read, 'VisaService'))
   @ApiOperation({ summary: 'Get a visa service by ID' })
+  @ApiOkResponse({ type: VisaServiceResponseDto })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
@@ -51,6 +63,7 @@ export class VisaController {
   @Patch(':id')
   @CheckPolicies(can(Action.Update, 'VisaService'))
   @ApiOperation({ summary: 'Update a visa service' })
+  @ApiOkResponse({ type: VisaServiceResponseDto })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateVisaServiceDto,
@@ -62,6 +75,7 @@ export class VisaController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'VisaService'))
   @ApiOperation({ summary: 'Delete a visa service' })
+  @ApiNoContentResponse()
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }

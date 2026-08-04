@@ -11,18 +11,30 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import {
   CreateVideoDto,
   UpdateVideoDto,
   UpdateVideoPageDto,
 } from './dto/video.dto';
+import {
+  VideoPageSettingsResponseDto,
+  VideoResponseDto,
+} from './dto/video-response.dto';
 import { VideosService } from './videos.service';
 
 @ApiTags('videos')
@@ -36,6 +48,7 @@ export class VideosController {
   @Get('page-settings')
   @CheckPolicies(can(Action.Read, 'VideoPageSettings'))
   @ApiOperation({ summary: 'Get video page settings' })
+  @ApiOkResponse({ type: VideoPageSettingsResponseDto })
   getPage() {
     return this.service.getPageSettings();
   }
@@ -43,6 +56,7 @@ export class VideosController {
   @Patch('page-settings')
   @CheckPolicies(can(Action.Update, 'VideoPageSettings'))
   @ApiOperation({ summary: 'Update video page settings' })
+  @ApiOkResponse({ type: VideoPageSettingsResponseDto })
   updatePage(@Body() dto: UpdateVideoPageDto) {
     return this.service.updatePageSettings(dto);
   }
@@ -51,6 +65,7 @@ export class VideosController {
   @Post()
   @CheckPolicies(can(Action.Create, 'Video'))
   @ApiOperation({ summary: 'Create a video' })
+  @ApiCreatedResponse({ type: VideoResponseDto })
   create(@Body() dto: CreateVideoDto) {
     return this.service.create(dto);
   }
@@ -58,6 +73,7 @@ export class VideosController {
   @Get()
   @CheckPolicies(can(Action.Read, 'Video'))
   @ApiOperation({ summary: 'List videos' })
+  @ApiPaginatedOkResponse(VideoResponseDto)
   findAll(@Query() query: PaginationQueryDto) {
     return this.service.findAll(query);
   }
@@ -65,6 +81,7 @@ export class VideosController {
   @Get(':id')
   @CheckPolicies(can(Action.Read, 'Video'))
   @ApiOperation({ summary: 'Get a video by ID' })
+  @ApiOkResponse({ type: VideoResponseDto })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
@@ -73,6 +90,7 @@ export class VideosController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Update, 'Video'))
   @ApiOperation({ summary: 'Reorder videos' })
+  @ApiNoContentResponse()
   async reorder(@Body() dto: ReorderDto) {
     await this.service.reorder(dto.items);
   }
@@ -80,6 +98,7 @@ export class VideosController {
   @Patch(':id')
   @CheckPolicies(can(Action.Update, 'Video'))
   @ApiOperation({ summary: 'Update a video' })
+  @ApiOkResponse({ type: VideoResponseDto })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateVideoDto) {
     return this.service.update(id, dto);
   }
@@ -88,6 +107,7 @@ export class VideosController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'Video'))
   @ApiOperation({ summary: 'Delete a video' })
+  @ApiNoContentResponse()
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }

@@ -10,7 +10,14 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
@@ -20,6 +27,10 @@ import {
   UpdateSiteSettingsDto,
   UpdateSocialLinkDto,
 } from './dto/settings.dto';
+import {
+  SiteSettingsResponseDto,
+  SocialLinkResponseDto,
+} from './dto/settings-response.dto';
 import { SettingsService } from './settings.service';
 
 @ApiTags('settings')
@@ -32,6 +43,7 @@ export class SettingsController {
   @Get()
   @CheckPolicies(can(Action.Read, 'SiteSettings'))
   @ApiOperation({ summary: 'Get site settings' })
+  @ApiOkResponse({ type: SiteSettingsResponseDto })
   getSettings() {
     return this.service.getSettings();
   }
@@ -39,6 +51,7 @@ export class SettingsController {
   @Patch()
   @CheckPolicies(can(Action.Update, 'SiteSettings'))
   @ApiOperation({ summary: 'Update site settings' })
+  @ApiOkResponse({ type: SiteSettingsResponseDto })
   updateSettings(@Body() dto: UpdateSiteSettingsDto) {
     return this.service.updateSettings(dto);
   }
@@ -46,6 +59,7 @@ export class SettingsController {
   @Get('social-links')
   @CheckPolicies(can(Action.Read, 'SocialLink'))
   @ApiOperation({ summary: 'List social links' })
+  @ApiOkResponse({ type: [SocialLinkResponseDto] })
   listSocial() {
     return this.service.listSocialLinks();
   }
@@ -53,6 +67,7 @@ export class SettingsController {
   @Post('social-links')
   @CheckPolicies(can(Action.Create, 'SocialLink'))
   @ApiOperation({ summary: 'Create a social link' })
+  @ApiCreatedResponse({ type: SocialLinkResponseDto })
   createSocial(@Body() dto: CreateSocialLinkDto) {
     return this.service.createSocialLink(dto);
   }
@@ -60,6 +75,7 @@ export class SettingsController {
   @Patch('social-links/:id')
   @CheckPolicies(can(Action.Update, 'SocialLink'))
   @ApiOperation({ summary: 'Update a social link' })
+  @ApiOkResponse({ type: SocialLinkResponseDto })
   updateSocial(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSocialLinkDto,
@@ -71,6 +87,7 @@ export class SettingsController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'SocialLink'))
   @ApiOperation({ summary: 'Delete a social link' })
+  @ApiNoContentResponse()
   removeSocial(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.removeSocialLink(id);
   }

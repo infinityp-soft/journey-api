@@ -11,15 +11,24 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import { BannersService } from './banners.service';
 import { CreateBannerDto, UpdateBannerDto } from './dto/banner.dto';
+import { BannerResponseDto } from './dto/banner-response.dto';
 
 @ApiTags('banners')
 @ApiBearerAuth('access-token')
@@ -31,6 +40,7 @@ export class BannersController {
   @Post()
   @CheckPolicies(can(Action.Create, 'Banner'))
   @ApiOperation({ summary: 'Create a banner' })
+  @ApiCreatedResponse({ type: BannerResponseDto })
   create(@Body() dto: CreateBannerDto) {
     return this.service.create(dto);
   }
@@ -38,6 +48,7 @@ export class BannersController {
   @Get()
   @CheckPolicies(can(Action.Read, 'Banner'))
   @ApiOperation({ summary: 'List banners' })
+  @ApiPaginatedOkResponse(BannerResponseDto)
   findAll(@Query() query: PaginationQueryDto) {
     return this.service.findAll(query);
   }
@@ -45,6 +56,7 @@ export class BannersController {
   @Get(':id')
   @CheckPolicies(can(Action.Read, 'Banner'))
   @ApiOperation({ summary: 'Get a banner by ID' })
+  @ApiOkResponse({ type: BannerResponseDto })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
@@ -53,6 +65,7 @@ export class BannersController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Update, 'Banner'))
   @ApiOperation({ summary: 'Reorder banners' })
+  @ApiNoContentResponse()
   async reorder(@Body() dto: ReorderDto) {
     await this.service.reorder(dto.items);
   }
@@ -60,6 +73,7 @@ export class BannersController {
   @Patch(':id')
   @CheckPolicies(can(Action.Update, 'Banner'))
   @ApiOperation({ summary: 'Update a banner' })
+  @ApiOkResponse({ type: BannerResponseDto })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBannerDto,
@@ -71,6 +85,7 @@ export class BannersController {
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'Banner'))
   @ApiOperation({ summary: 'Delete a banner' })
+  @ApiNoContentResponse()
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }

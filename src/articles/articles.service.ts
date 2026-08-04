@@ -8,7 +8,7 @@ import { CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
 const ARTICLE_INCLUDE = {
   category: true,
   featuredImage: true,
-  author: true,
+  author: { select: { id: true, name: true, email: true, role: true } },
 } as const;
 
 @Injectable()

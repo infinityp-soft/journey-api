@@ -11,18 +11,31 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import {
   CreateEventDto,
   CreateEventRegistrationDto,
   UpdateEventDto,
 } from './dto/event.dto';
+import {
+  EventDetailResponseDto,
+  EventListItemResponseDto,
+  EventRegistrationResponseDto,
+} from './dto/event-response.dto';
 import { EventsService } from './events.service';
 
 @ApiTags('events')
@@ -35,6 +48,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Event'))
   @ApiOperation({ summary: 'Create an event' })
+  @ApiCreatedResponse({ type: EventDetailResponseDto })
   create(@Body() dto: CreateEventDto) {
     return this.service.create(dto);
   }
@@ -43,6 +57,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Event'))
   @ApiOperation({ summary: 'List events' })
+  @ApiPaginatedOkResponse(EventListItemResponseDto)
   findAll(@Query() query: PaginationQueryDto) {
     return this.service.findAll(query);
   }
@@ -51,6 +66,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Event'))
   @ApiOperation({ summary: 'Get an event by ID' })
+  @ApiOkResponse({ type: EventDetailResponseDto })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
@@ -59,6 +75,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Event'))
   @ApiOperation({ summary: 'Update an event' })
+  @ApiOkResponse({ type: EventDetailResponseDto })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEventDto) {
     return this.service.update(id, dto);
   }
@@ -68,6 +85,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'Event'))
   @ApiOperation({ summary: 'Delete an event' })
+  @ApiNoContentResponse()
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
@@ -77,6 +95,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'EventRegistration'))
   @ApiOperation({ summary: 'List event registrations' })
+  @ApiPaginatedOkResponse(EventRegistrationResponseDto)
   listRegistrations(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: PaginationQueryDto,
@@ -88,6 +107,7 @@ export class EventsController {
   @Public()
   @Post(':id/registrations')
   @ApiOperation({ summary: 'Register for an event (public)' })
+  @ApiCreatedResponse({ type: EventRegistrationResponseDto })
   register(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateEventRegistrationDto,
@@ -100,6 +120,7 @@ export class EventsController {
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'EventRegistration'))
   @ApiOperation({ summary: 'Delete an event registration' })
+  @ApiNoContentResponse()
   removeRegistration(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('regId', ParseUUIDPipe) regId: string,
