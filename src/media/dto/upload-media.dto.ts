@@ -5,7 +5,8 @@ export class UploadMediaDto {
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    description: 'Image file (jpg, png, or webp)',
+    description:
+      'Image file (jpg, png, or webp). Stored as optimized WebP (max 2560px).',
   })
   file: Express.Multer.File;
 

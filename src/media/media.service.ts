@@ -32,6 +32,13 @@ const MEDIA_REFERENCES: Array<[string, string]> = [
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
+/** Longest edge after auto-orient; never upscale smaller assets (logos, icons). */
+const MAX_IMAGE_DIMENSION = 2560;
+/** WebP quality 1–100. 80 is a strong size/quality trade-off for CMS photos. */
+const WEBP_QUALITY = 80;
+/** CPU effort 0 (fastest) – 6 (smallest). Uploads are not a hot path. */
+const WEBP_EFFORT = 6;
+
 @Injectable()
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
@@ -56,12 +63,7 @@ export class MediaService {
       );
     }
 
-    // Normalize every image to WebP; capture dimensions.
-    const pipeline = sharp(file.buffer).rotate();
-    const meta = await pipeline.metadata();
-    const output = await pipeline
-      .webp({ quality: 82 })
-      .toBuffer({ resolveWithObject: true });
+    const output = await this.optimizeToWebp(file.buffer);
 
     const now = new Date();
     const yyyy = String(now.getUTCFullYear());
@@ -85,8 +87,8 @@ export class MediaService {
         originalFilename: file.originalname,
         mimeType: 'image/webp',
         sizeBytes: output.info.size,
-        width: output.info.width ?? meta.width ?? null,
-        height: output.info.height ?? meta.height ?? null,
+        width: output.info.width ?? null,
+        height: output.info.height ?? null,
         altText: altText ?? null,
         checksumSha256: checksum,
         uploadedById: uploadedById ?? null,
@@ -118,6 +120,28 @@ export class MediaService {
     const asset = await this.findOne(id);
     await this.deleteFile(asset.storageKey);
     await this.prisma.mediaAsset.delete({ where: { id } });
+  }
+
+  /** Auto-orient, cap the longest edge, strip metadata, encode as WebP. */
+  private async optimizeToWebp(buffer: Buffer) {
+    try {
+      return await sharp(buffer)
+        .rotate()
+        .resize({
+          width: MAX_IMAGE_DIMENSION,
+          height: MAX_IMAGE_DIMENSION,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .webp({
+          quality: WEBP_QUALITY,
+          effort: WEBP_EFFORT,
+          smartSubsample: true,
+        })
+        .toBuffer({ resolveWithObject: true });
+    } catch {
+      throw new BadRequestException('Invalid or corrupt image file');
+    }
   }
 
   private async deleteFile(storageKey: string): Promise<void> {

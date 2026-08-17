@@ -44,7 +44,11 @@ export class MediaController {
   @Post()
   @CheckPolicies(can(Action.Create, 'Media'))
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload a media asset' })
+  @ApiOperation({
+    summary: 'Upload a media asset',
+    description:
+      'Optimizes the image with sharp: auto-orient, max 2560px on the long edge, WebP quality 80.',
+  })
   @ApiCreatedResponse({ type: MediaAssetResponseDto })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadMediaDto })
