@@ -32,10 +32,8 @@ const MEDIA_REFERENCES: Array<[string, string]> = [
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-/** Longest edge after auto-orient; never upscale smaller assets (logos, icons). */
-const MAX_IMAGE_DIMENSION = 2560;
-/** WebP quality 1–100. 80 is a strong size/quality trade-off for CMS photos. */
-const WEBP_QUALITY = 80;
+/** WebP quality 1–100. */
+const WEBP_QUALITY = 90;
 /** CPU effort 0 (fastest) – 6 (smallest). Uploads are not a hot path. */
 const WEBP_EFFORT = 6;
 
@@ -122,17 +120,11 @@ export class MediaService {
     await this.prisma.mediaAsset.delete({ where: { id } });
   }
 
-  /** Auto-orient, cap the longest edge, strip metadata, encode as WebP. */
+  /** Auto-orient, strip metadata, encode as WebP. */
   private async optimizeToWebp(buffer: Buffer) {
     try {
       return await sharp(buffer)
         .rotate()
-        .resize({
-          width: MAX_IMAGE_DIMENSION,
-          height: MAX_IMAGE_DIMENSION,
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
         .webp({
           quality: WEBP_QUALITY,
           effort: WEBP_EFFORT,
