@@ -1,7 +1,7 @@
 # Journey Education Admin CMS — API
 
 NestJS + **Prisma** + PostgreSQL backend for the Journey Education Admin CMS.
-Bilingual (EN/TH) content, image storage on a mounted volume, JWT auth
+Bilingual (EN/TH) content, image storage on RustFS or a mounted volume, JWT auth
 (access + refresh), CASL roles (Admin / Editor / Viewer), and **Swagger** docs.
 
 ## Stack
@@ -10,8 +10,8 @@ Bilingual (EN/TH) content, image storage on a mounted volume, JWT auth
 - **@nestjs/swagger** — OpenAPI UI at `/api/docs`
 - **@casl/ability** — role permissions (see `src/auth/casl`)
 - **@nestjs/jwt** + **passport-jwt** — access + rotating refresh tokens
-- **Multer + sharp** — uploads → WebP on a volume; metadata in `media_assets`
-- **@nestjs/serve-static** — `/media/*`
+- **Multer + sharp** — uploads → WebP; metadata in `media_assets`
+- **@aws-sdk/client-s3** — RustFS (S3-compatible) object storage
 - **@nestjs/schedule** — nightly GC of unreferenced media
 
 ## Getting started
@@ -72,8 +72,21 @@ Send `Authorization: Bearer <accessToken>`. Global `JwtAuthGuard`; public routes
 ## Media
 
 `POST /api/media-assets` (multipart field `file`) → sharp WebP →
-`$UPLOAD_DIR/yyyy/mm/dd/{uuid}.webp` → `media_assets` row. Business DTOs take
-`*Id` FKs. Served at `PUBLIC_MEDIA_URL` (`/media/...`).
+`yyyy/mm/dd/{uuid}.webp` → `media_assets` row. Business DTOs take `*Id` FKs.
+Every image is served at `PUBLIC_MEDIA_URL` (`/media/{storageKey}`) regardless of
+where the bytes live, so switching drivers never changes a stored URL.
+
+`MEDIA_DRIVER` picks the backing store:
+
+| Driver | Where bytes go | Needs |
+|---|---|---|
+| `local` (default) | `$UPLOAD_DIR/yyyy/mm/dd/{uuid}.webp` | a mounted volume |
+| `rustfs` | `RUSTFS_BUCKET` on an S3-compatible RustFS server | `RUSTFS_*` vars |
+
+RustFS speaks S3, so the driver is the plain AWS SDK pointed at
+`RUSTFS_ENDPOINT` with path-style addressing. The bucket is created on the first
+upload — the API boots fine while RustFS is still starting. `docker compose up`
+runs RustFS alongside the API (S3 API on `:9000`, console on `:9001`).
 
 ## Modules → routes
 

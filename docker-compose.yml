@@ -9,13 +9,35 @@ services:
       DATABASE_URL: postgresql://journey:secret@db:5432/journey?schema=public
       JWT_ACCESS_SECRET: change-me-access-secret
       JWT_REFRESH_SECRET: change-me-refresh-secret
-      UPLOAD_DIR: /data/uploads
       PUBLIC_MEDIA_URL: http://localhost:3000/media
-    volumes:
-      - media:/data/uploads
+      MEDIA_DRIVER: rustfs
+      RUSTFS_ENDPOINT: http://rustfs:9000
+      RUSTFS_BUCKET: journey-media
+      RUSTFS_ACCESS_KEY: journey
+      RUSTFS_SECRET_KEY: change-me-rustfs-secret
     depends_on:
       db:
         condition: service_healthy
+      # No health gate: the API boots without RustFS and creates the bucket on
+      # the first upload.
+      rustfs:
+        condition: service_started
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    command: ["/data"]
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    environment:
+      RUSTFS_ACCESS_KEY: journey
+      RUSTFS_SECRET_KEY: change-me-rustfs-secret
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_OBS_LOGGER_LEVEL: error
+    volumes:
+      - rustfs:/data
 
   db:
     image: postgres:16
@@ -34,5 +56,5 @@ services:
       retries: 10
 
 volumes:
-  media:
+  rustfs:
   pgdata:

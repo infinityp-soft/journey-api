@@ -100,14 +100,18 @@ const FLOWS: Record<
     auth: "JWT + Action.Create on Media",
     steps: [
       "POST /api/media-assets multipart field file",
-      "Validate mime → sharp → WebP → UPLOAD_DIR/yyyy/mm/dd/{uuid}.webp",
+      "Validate mime → sharp → WebP → StorageDriver.put(yyyy/mm/dd/{uuid}.webp)",
+      "MEDIA_DRIVER picks the store: local volume or RustFS bucket (S3)",
       "Insert media_assets row (storageKey, dimensions, checksum)",
       "Client stores returned id as featuredImageId / coverImageId on content",
+      "GET /media/{storageKey} streams the object back out of the same driver",
       "Nightly MediaGarbageCollector deletes orphans older than 24h",
     ],
     files: [
       "src/media/media.controller.ts",
       "src/media/media.service.ts",
+      "src/media/media-files.controller.ts",
+      "src/media/storage/",
       "src/media/media.gc.ts",
     ],
     endpoints: [
@@ -198,7 +202,7 @@ const ARCH_NODES = [
   { id: "guards", label: "JWT + CASL" },
   { id: "svc", label: "Services" },
   { id: "pg", label: "PostgreSQL" },
-  { id: "disk", label: "Upload volume" },
+  { id: "disk", label: "RustFS / volume" },
   { id: "media", label: "GET /media" },
 ];
 
@@ -536,7 +540,10 @@ export default function JourneyDataFlow() {
             ["DATABASE_URL", "Postgres for Prisma"],
             ["JWT_ACCESS_SECRET / TTL", "Access token"],
             ["JWT_REFRESH_SECRET / TTL", "Refresh token"],
-            ["UPLOAD_DIR", "Disk path for images"],
+            ["MEDIA_DRIVER", "local (volume) or rustfs (S3 bucket)"],
+            ["UPLOAD_DIR", "Disk path for images — local only"],
+            ["RUSTFS_ENDPOINT / BUCKET", "RustFS S3 API and bucket — rustfs only"],
+            ["RUSTFS_ACCESS_KEY / SECRET_KEY", "RustFS credentials — rustfs only"],
             ["PUBLIC_MEDIA_URL", "Public media base URL"],
             ["MAX_UPLOAD_MB", "Upload size limit"],
             ["SEED_ADMIN_*", "Bootstrap admin via seed"],

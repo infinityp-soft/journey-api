@@ -1,17 +1,16 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'crypto';
-import { promises as fs } from 'fs';
 import * as path from 'path';
 import sharp from 'sharp';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
-import { AppConfig } from '../config/configuration';
 import { PrismaService } from '../prisma/prisma.service';
+import { STORAGE_DRIVER, StorageDriver } from './storage/storage.driver';
 
 /** (table, column) pairs that reference media_assets — kept in sync with the schema. */
 const MEDIA_REFERENCES: Array<[string, string]> = [
@@ -41,14 +40,11 @@ const WEBP_EFFORT = 6;
 @Injectable()
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
-  private readonly uploadDir: string;
 
   constructor(
     private readonly prisma: PrismaService,
-    config: ConfigService<AppConfig>,
-  ) {
-    this.uploadDir = config.get('media', { infer: true })!.uploadDir;
-  }
+    @Inject(STORAGE_DRIVER) private readonly storage: StorageDriver,
+  ) {}
 
   async upload(
     file: Express.Multer.File,
@@ -70,13 +66,8 @@ export class MediaService {
     const dd = String(now.getUTCDate()).padStart(2, '0');
     const filename = `${randomUUID()}.webp`;
     const storageKey = path.posix.join(yyyy, mm, dd, filename);
-    const absPath = path.join(this.uploadDir, yyyy, mm, dd, filename);
 
-    await fs.mkdir(path.dirname(absPath), { recursive: true });
-    // Atomic write: temp file then rename.
-    const tmpPath = `${absPath}.tmp`;
-    await fs.writeFile(tmpPath, output.data);
-    await fs.rename(tmpPath, absPath);
+    await this.storage.put(storageKey, output.data, 'image/webp');
 
     const checksum = createHash('sha256').update(output.data).digest('hex');
 
@@ -117,7 +108,7 @@ export class MediaService {
 
   async remove(id: string): Promise<void> {
     const asset = await this.findOne(id);
-    await this.deleteFile(asset.storageKey);
+    await this.storage.delete(asset.storageKey);
     await this.prisma.mediaAsset.delete({ where: { id } });
   }
 
@@ -137,17 +128,9 @@ export class MediaService {
     }
   }
 
-  private async deleteFile(storageKey: string): Promise<void> {
-    try {
-      await fs.unlink(path.join(this.uploadDir, storageKey));
-    } catch (err) {
-      this.logger.warn(`Could not delete file ${storageKey}: ${err}`);
-    }
-  }
-
   /**
    * Garbage-collect media rows not referenced by any FK and older than 24h,
-   * removing both the DB row and the file on the volume.
+   * removing both the DB row and the stored object.
    */
   async purgeUnreferenced(): Promise<number> {
     const union = MEDIA_REFERENCES.map(
@@ -166,7 +149,7 @@ export class MediaService {
 
     if (orphans.length === 0) return 0;
 
-    await Promise.all(orphans.map((o) => this.deleteFile(o.storage_key)));
+    await Promise.all(orphans.map((o) => this.storage.delete(o.storage_key)));
     await this.prisma.mediaAsset.deleteMany({
       where: { id: { in: orphans.map((o) => o.id) } },
     });

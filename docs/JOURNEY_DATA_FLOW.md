@@ -32,15 +32,15 @@ flowchart LR
 
   subgraph data [Data]
     PG[(PostgreSQL)]
-    Vol[Upload volume UPLOAD_DIR]
+    Store[Media store: RustFS bucket or UPLOAD_DIR]
   end
 
   Admin -->|Bearer JWT /api/*| Main
   Site -->|Public: leads, registrations, visits| Main
   Main --> Guards --> Ctrl --> Svc
   Svc --> PG
-  Svc -->|images| Vol
-  Vol -->|GET /media/*| Site
+  Svc -->|images| Store
+  Store -->|GET /media/*| Site
   Ctrl --> IX
 ```
 
@@ -142,14 +142,19 @@ sequenceDiagram
 **Auth:** JWT + `Action.Create` on Media
 
 1. `POST /api/media-assets` multipart field `file`
-2. Validate mime → sharp → WebP → `$UPLOAD_DIR/yyyy/mm/dd/{uuid}.webp`
+2. Validate mime → sharp → WebP → `StorageDriver.put('yyyy/mm/dd/{uuid}.webp')`
 3. Insert `media_assets` row (`storageKey`, dimensions, checksum)
 4. Client stores returned `id` as `featuredImageId` / `coverImageId` on content
-5. Nightly `MediaGarbageCollector` deletes orphans older than 24h
+5. `GET /media/{storageKey}` streams the object back out of the same driver
+6. Nightly `MediaGarbageCollector` deletes orphans older than 24h
+
+`MEDIA_DRIVER` selects the driver — `local` (a mounted volume) or `rustfs` (an
+S3-compatible bucket, reached with the AWS SDK). Only the driver changes: keys,
+URLs and `media_assets` rows are identical either way.
 
 **Endpoints:** `POST /api/media-assets`, `GET /media/{storageKey}`
 
-**Files:** `src/media/media.controller.ts`, `src/media/media.service.ts`, `src/media/media.gc.ts`
+**Files:** `src/media/media.controller.ts`, `src/media/media.service.ts`, `src/media/media-files.controller.ts`, `src/media/storage/`, `src/media/media.gc.ts`
 
 ---
 
@@ -296,7 +301,10 @@ All image FKs point to `media_assets` (`ON DELETE SET NULL`). Files live on disk
 | `DATABASE_URL` | Postgres for Prisma |
 | `JWT_ACCESS_SECRET` / `JWT_ACCESS_TTL` | Access token |
 | `JWT_REFRESH_SECRET` / `JWT_REFRESH_TTL` | Refresh token |
-| `UPLOAD_DIR` | Disk path for images |
+| `MEDIA_DRIVER` | `local` (volume) or `rustfs` (S3 bucket) |
+| `UPLOAD_DIR` | Disk path for images — `local` only |
+| `RUSTFS_ENDPOINT` / `RUSTFS_BUCKET` | RustFS S3 API and bucket — `rustfs` only |
+| `RUSTFS_ACCESS_KEY` / `RUSTFS_SECRET_KEY` | RustFS credentials — `rustfs` only |
 | `PUBLIC_MEDIA_URL` | Public media base URL |
 | `MAX_UPLOAD_MB` | Upload size limit |
 | `SEED_ADMIN_*` | Bootstrap admin via seed |

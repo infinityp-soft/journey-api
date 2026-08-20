@@ -47,7 +47,7 @@ export class MediaController {
   @ApiOperation({
     summary: 'Upload a media asset',
     description:
-      'Optimizes the image with sharp: auto-orient, max 2560px on the long edge, WebP quality 80.',
+      'Optimizes the image with sharp: auto-orient, strip metadata, WebP quality 90 at full resolution.',
   })
   @ApiCreatedResponse({ type: MediaAssetResponseDto })
   @ApiConsumes('multipart/form-data')

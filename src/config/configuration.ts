@@ -1,3 +1,15 @@
+/** Where uploaded images live: the local filesystem, or a RustFS bucket. */
+export type MediaDriver = 'local' | 'rustfs';
+
+export interface RustFsConfig {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+  forcePathStyle: boolean;
+}
+
 export interface AppConfig {
   env: string;
   port: number;
@@ -10,9 +22,11 @@ export interface AppConfig {
     refreshTtl: string;
   };
   media: {
+    driver: MediaDriver;
     uploadDir: string;
     publicUrl: string;
     maxUploadMb: number;
+    rustfs: RustFsConfig;
   };
 }
 
@@ -30,8 +44,21 @@ export default (): AppConfig => ({
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '7d',
   },
   media: {
+    driver: (process.env.MEDIA_DRIVER ?? 'local') as MediaDriver,
     uploadDir: process.env.UPLOAD_DIR ?? './storage/uploads',
     publicUrl: process.env.PUBLIC_MEDIA_URL ?? 'http://localhost:3000/media',
     maxUploadMb: parseInt(process.env.MAX_UPLOAD_MB ?? '5', 10),
+    rustfs: {
+      endpoint: (process.env.RUSTFS_ENDPOINT ?? 'http://localhost:9000').replace(
+        /\/+$/,
+        '',
+      ),
+      region: process.env.RUSTFS_REGION ?? 'us-east-1',
+      bucket: process.env.RUSTFS_BUCKET ?? 'journey-media',
+      accessKey: process.env.RUSTFS_ACCESS_KEY ?? '',
+      secretKey: process.env.RUSTFS_SECRET_KEY ?? '',
+      // RustFS serves path-style URLs unless RUSTFS_SERVER_DOMAINS is set.
+      forcePathStyle: process.env.RUSTFS_FORCE_PATH_STYLE !== 'false',
+    },
   },
 });

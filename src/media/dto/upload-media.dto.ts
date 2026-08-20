@@ -6,7 +6,7 @@ export class UploadMediaDto {
     type: 'string',
     format: 'binary',
     description:
-      'Image file (jpg, png, or webp). Stored as optimized WebP (max 2560px).',
+      'Image file (jpg, png, or webp). Stored as optimized WebP at full resolution.',
   })
   file: Express.Multer.File;
 
