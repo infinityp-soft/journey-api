@@ -20,8 +20,12 @@ roles from the Add User modal.
 - **admin** → `can(manage, all)`
 - **editor** → `read` all; `manage` content subjects (incl. `publish`); `update`
   own `User`; explicitly cannot create/delete users, change site settings, or
-  manage social links.
+  manage social links / pre-footer CTA highlights.
 - **viewer** → `read` all; `update` own `User`.
+
+Global configuration (`User`, `SiteSettings`, `SocialLink`, `PreFooterHighlight`,
+`ActivityLog`) stays admin-only for writes — it is deliberately excluded from
+`EDITOR_CONTENT_SUBJECTS` in `subjects.ts`.
 
 ## Using it in a controller
 

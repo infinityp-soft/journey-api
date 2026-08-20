@@ -96,7 +96,7 @@ sequenceDiagram
 | Role | Capability |
 |---|---|
 | `admin` | `manage all` |
-| `editor` | Full content CRUD/publish; cannot manage users/settings/social; can update own user |
+| `editor` | Full content CRUD/publish; cannot manage users/settings/social/pre-footer CTA; can update own user |
 | `viewer` | Read-all; update own user |
 
 **Key files:** `src/auth/auth.controller.ts`, `src/auth/auth.service.ts`, `src/auth/strategies/jwt.strategy.ts`, `src/auth/casl/`
@@ -197,6 +197,26 @@ sequenceDiagram
 
 ---
 
+### G. Global settings → pre-footer CTA
+
+**Auth:** JWT + `Action.Update` on `SiteSettings` (admin only)
+
+1. `GET /api/settings` returns the singleton with `preFooterHighlights` included,
+   ordered by `sortOrder`
+2. `PATCH /api/settings` updates the band itself — bilingual title/description,
+   `preFooterEnabled`, and the CTA button (`preFooterCtaPlatform`,
+   `preFooterCtaLabelEn/Th`, `preFooterCtaUrl`)
+3. The checklist rows are managed separately at
+   `/api/settings/pre-footer-highlights`; the service caps them at 3
+4. The marketing site renders the band above the footer, linking the button at
+   the chosen social channel (e.g. LINE)
+
+**Endpoints:** `GET|PATCH /api/settings`, `POST /api/settings/pre-footer-highlights`, `PATCH|DELETE /api/settings/pre-footer-highlights/:id`
+
+**Files:** `src/settings/settings.controller.ts`, `src/settings/settings.service.ts`
+
+---
+
 ## Module → route map
 
 | Module | Base route | Notes |
@@ -216,8 +236,30 @@ sequenceDiagram
 | Videos | `/api/videos` | + page-settings |
 | Events | `/api/events` | + public registrations |
 | Leads | `/api/leads` | + public `/submit` |
-| Settings | `/api/settings` | + social-links |
+| Settings | `/api/settings` | + social-links, pre-footer-highlights |
 | Analytics | `/api/analytics/visit` | public counter |
+
+---
+
+## List filtering
+
+Every list endpoint shares one query contract, assembled by `buildWhere()` and
+fed into Prisma as a single `where`:
+
+| Param | Applies to |
+|---|---|
+| `page`, `limit` | Pagination |
+| `sort`, `order` | Ordering (falls back to each module's default) |
+| `search` | Case-insensitive `contains` across the module's searchable columns |
+| `dateFrom`, `dateTo` | The module's date column; a bare `YYYY-MM-DD` upper bound covers the whole day |
+| module filters | Equality match — `status`, `topic`, `categoryId`, `isActive`, … |
+
+Modules backed by `BasePrismaService` declare `searchable` / `filterable` /
+`dateField` in their constructor; custom services (articles, events, visa,
+users) call `buildWhere()` directly. Allowed filters per endpoint are listed in
+[`README.md`](../README.md#list-query-parameters).
+
+**Files:** `src/common/crud/build-where.ts`, `src/common/crud/base-prisma.service.ts`, `src/common/dto/pagination-query.dto.ts`
 
 ---
 
@@ -236,12 +278,13 @@ All image FKs point to `media_assets` (`ON DELETE SET NULL`). Files live on disk
 | `staff_members` | Team | photo; testimonials as counselor |
 | `destinations` | Study destinations | cover; PublishStatus |
 | `articles` | Blog | category, author, featured image |
-| `visa_services` | Visa pages | cascade `visa_documents` |
+| `visa_services` | Visa pages (bilingual) | cascade `visa_documents` |
 | `testimonials` | Reviews | counselor, portrait |
 | `videos` | Video page | YouTube + thumbnail |
 | `events` | Events + RSVP | form_fields, registrations |
 | `leads` | Inquiries | topic/status; `lead_code` |
-| `site_settings` | Contact/SEO/visits | logo + contact cover |
+| `site_settings` | Contact/SEO/visits/pre-footer CTA | logo + contact cover; cascade `pre_footer_highlights` |
+| `pre_footer_highlights` | Pre-footer CTA checklist | → site_settings (cascade) |
 | `social_links` | Footer/social | platform enum |
 
 ---

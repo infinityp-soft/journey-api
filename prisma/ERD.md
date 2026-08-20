@@ -28,6 +28,7 @@ erDiagram
     media_assets ||--o{ site_settings : "contact_cover / logo"
 
     about_us ||--o{ about_highlights : contains
+    site_settings ||--o{ pre_footer_highlights : contains
     staff_members ||--o{ testimonials : counselor
     article_categories ||--o{ articles : classifies
     visa_services ||--o{ visa_documents : checklist
@@ -121,7 +122,8 @@ erDiagram
 
     visa_services {
         uuid id PK
-        text title
+        text title_en
+        text title_th
         text country
         uuid header_image_id FK
         simple_status status
@@ -130,7 +132,8 @@ erDiagram
     visa_documents {
         uuid id PK
         uuid visa_service_id FK
-        text label
+        text label_en
+        text label_th
     }
 
     testimonials {
@@ -192,8 +195,22 @@ erDiagram
         uuid id PK
         uuid logo_id FK
         uuid contact_cover_image_id FK
+        boolean pre_footer_enabled
+        text pre_footer_title_en
+        text pre_footer_title_th
+        social_platform pre_footer_cta_platform
+        text pre_footer_cta_url
         int site_visits
         boolean is_singleton UK
+    }
+
+    pre_footer_highlights {
+        uuid id PK
+        uuid site_settings_id FK
+        text text_en
+        text text_th
+        boolean is_enabled
+        int sort_order
     }
 
     social_links {
@@ -270,6 +287,7 @@ erDiagram
 ```mermaid
 erDiagram
     about_us ||--o{ about_highlights : "1:N cascade (max 3 app)"
+    site_settings ||--o{ pre_footer_highlights : "1:N cascade (max 3 app)"
     article_categories ||--o{ articles : "1:N set null"
     users ||--o{ articles : authors
     staff_members ||--o{ testimonials : counselor
@@ -333,7 +351,8 @@ erDiagram
     }
 
     visa_services {
-        text title
+        text title_en
+        text title_th
         text country
         simple_status status
     }
@@ -352,7 +371,16 @@ erDiagram
 
     site_settings {
         boolean is_singleton UK
+        boolean pre_footer_enabled
+        social_platform pre_footer_cta_platform
         int site_visits
+    }
+
+    pre_footer_highlights {
+        text text_en
+        text text_th
+        boolean is_enabled
+        int sort_order
     }
 
     social_links {

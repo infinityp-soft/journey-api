@@ -29,7 +29,8 @@ type FlowId =
   | "media"
   | "leads"
   | "events"
-  | "visits";
+  | "visits"
+  | "settings";
 
 const FLOW_OPTIONS = [
   { value: "auth", label: "Admin login → dashboard" },
@@ -38,6 +39,7 @@ const FLOW_OPTIONS = [
   { value: "leads", label: "Public lead capture" },
   { value: "events", label: "Event registration" },
   { value: "visits", label: "Site visit counter" },
+  { value: "settings", label: "Global settings → pre-footer CTA" },
 ];
 
 const FLOWS: Record<
@@ -165,6 +167,26 @@ const FLOWS: Record<
     endpoints: [
       "POST /api/analytics/visit",
       "GET /api/dashboard/summary",
+    ],
+  },
+  settings: {
+    title: "Global settings → pre-footer CTA",
+    auth: "JWT + Action.Update on SiteSettings (admin only)",
+    steps: [
+      "GET /api/settings returns the singleton with preFooterHighlights ordered by sortOrder",
+      "PATCH /api/settings edits the bilingual title/description and preFooterEnabled",
+      "CTA button stores preFooterCtaPlatform (e.g. line), label and destination URL",
+      "Checklist rows are managed separately and capped at 3 by the service",
+      "Marketing site renders the band above the footer",
+    ],
+    files: [
+      "src/settings/settings.controller.ts",
+      "src/settings/settings.service.ts",
+    ],
+    endpoints: [
+      "GET|PATCH /api/settings",
+      "POST /api/settings/pre-footer-highlights",
+      "PATCH|DELETE /api/settings/pre-footer-highlights/:id",
     ],
   },
 };
@@ -409,12 +431,12 @@ export default function JourneyDataFlow() {
             ["Staff", "/api/staff", "team members"],
             ["Destinations", "/api/destinations", "PublishStatus"],
             ["Articles", "/api/articles", "+ /article-categories"],
-            ["Visa", "/api/visa-services", "+ documents"],
+            ["Visa", "/api/visa-services", "+ documents (bilingual)"],
             ["Testimonials", "/api/testimonials", "counselor FK"],
             ["Videos", "/api/videos", "+ page-settings"],
             ["Events", "/api/events", "+ public registrations"],
             ["Leads", "/api/leads", "+ public /submit"],
-            ["Settings", "/api/settings", "+ social-links"],
+            ["Settings", "/api/settings", "+ social-links, pre-footer-highlights"],
             ["Analytics", "/api/analytics/visit", "public counter"],
           ]}
         />
@@ -437,8 +459,8 @@ export default function JourneyDataFlow() {
             </CardHeader>
             <CardBody>
               <Text size="small">
-                Full content CRUD/publish; no users/settings/social; can update
-                own user
+                Full content CRUD/publish; no users/settings/social/pre-footer
+                CTA; can update own user
               </Text>
             </CardBody>
           </Card>
@@ -471,12 +493,13 @@ export default function JourneyDataFlow() {
               ["staff_members", "Team", "photo; testimonials as counselor"],
               ["destinations", "Study destinations", "cover; PublishStatus"],
               ["articles", "Blog", "category, author, featured image"],
-              ["visa_services", "Visa pages", "cascade visa_documents"],
+              ["visa_services", "Visa pages (bilingual)", "cascade visa_documents"],
               ["testimonials", "Reviews", "counselor, portrait"],
               ["videos", "Video page", "YouTube + thumbnail"],
               ["events", "Events + RSVP", "form_fields, registrations"],
               ["leads", "Inquiries", "topic/status; lead_code"],
-              ["site_settings", "Contact/SEO/visits", "logo + contact cover"],
+              ["site_settings", "Contact/SEO/visits/pre-footer CTA", "logo + contact cover; cascade pre_footer_highlights"],
+              ["pre_footer_highlights", "Pre-footer CTA checklist", "→ site_settings (cascade)"],
               ["social_links", "Footer/social", "platform enum"],
             ]}
           />
