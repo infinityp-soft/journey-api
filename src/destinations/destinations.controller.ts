@@ -24,7 +24,7 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { DestinationQueryDto } from './dto/destination-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import { DestinationsService } from './destinations.service';
 import {
@@ -52,7 +52,7 @@ export class DestinationsController {
   @CheckPolicies(can(Action.Read, 'Destination'))
   @ApiOperation({ summary: 'List destinations' })
   @ApiPaginatedOkResponse(DestinationResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: DestinationQueryDto) {
     return this.service.findAll(query);
   }
 

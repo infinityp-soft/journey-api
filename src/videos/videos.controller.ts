@@ -23,7 +23,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { VideoQueryDto } from './dto/video-query.dto';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import {
@@ -74,7 +74,7 @@ export class VideosController {
   @CheckPolicies(can(Action.Read, 'Video'))
   @ApiOperation({ summary: 'List videos' })
   @ApiPaginatedOkResponse(VideoResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: VideoQueryDto) {
     return this.service.findAll(query);
   }
 

@@ -24,7 +24,7 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { VisaQueryDto } from './dto/visa-query.dto';
 import { CreateVisaServiceDto, UpdateVisaServiceDto } from './dto/visa.dto';
 import { VisaServiceResponseDto } from './dto/visa-response.dto';
 import { VisaService } from './visa.service';
@@ -48,7 +48,7 @@ export class VisaController {
   @CheckPolicies(can(Action.Read, 'VisaService'))
   @ApiOperation({ summary: 'List visa services' })
   @ApiPaginatedOkResponse(VisaServiceResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: VisaQueryDto) {
     return this.service.findAll(query);
   }
 

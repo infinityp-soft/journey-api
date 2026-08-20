@@ -24,6 +24,7 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ArticleQueryDto } from './dto/article-query.dto';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import { ArticleCategoriesService } from './article-categories.service';
@@ -108,7 +109,7 @@ export class ArticlesController {
   @CheckPolicies(can(Action.Read, 'Article'))
   @ApiOperation({ summary: 'List articles' })
   @ApiPaginatedOkResponse(ArticleResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: ArticleQueryDto) {
     return this.articles.findAll(query);
   }
 

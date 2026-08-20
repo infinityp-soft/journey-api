@@ -8,6 +8,8 @@ export class DestinationsService extends BasePrismaService {
     super(prisma.destination, {
       include: { coverImage: true },
       searchable: ['nameEn', 'nameTh'],
+      filterable: ['status'],
+      dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
     });
   }

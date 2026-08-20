@@ -24,7 +24,7 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { TestimonialQueryDto } from './dto/testimonial-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import {
   CreateTestimonialDto,
@@ -52,7 +52,7 @@ export class TestimonialsController {
   @CheckPolicies(can(Action.Read, 'Testimonial'))
   @ApiOperation({ summary: 'List testimonials' })
   @ApiPaginatedOkResponse(TestimonialResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: TestimonialQueryDto) {
     return this.service.findAll(query);
   }
 

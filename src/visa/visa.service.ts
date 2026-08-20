@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { Prisma } from '@prisma/client';
+import { buildWhere } from '../common/crud/build-where';
 import { PrismaService } from '../prisma/prisma.service';
+import { VisaQueryDto } from './dto/visa-query.dto';
 import { CreateVisaServiceDto, UpdateVisaServiceDto } from './dto/visa.dto';
 
 const VISA_INCLUDE = {
@@ -20,7 +22,8 @@ export class VisaService {
         documents: documents?.length
           ? {
               create: documents.map((d, i) => ({
-                label: d.label,
+                labelEn: d.labelEn,
+                labelTh: d.labelTh,
                 sortOrder: d.sortOrder ?? i,
               })),
             }
@@ -30,17 +33,23 @@ export class VisaService {
     });
   }
 
-  async findAll(query: PaginationQueryDto) {
+  async findAll(query: VisaQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const where = buildWhere<Prisma.VisaServiceWhereInput>(query, {
+      searchable: ['titleEn', 'titleTh', 'country'],
+      filterable: ['status', 'country'],
+      dateField: 'createdAt',
+    });
     const [data, total] = await Promise.all([
       this.prisma.visaService.findMany({
+        where,
         include: VISA_INCLUDE,
         orderBy: { sortOrder: 'asc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.visaService.count(),
+      this.prisma.visaService.count({ where }),
     ]);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
@@ -66,7 +75,8 @@ export class VisaService {
           ? {
               deleteMany: {},
               create: documents.map((d, i) => ({
-                label: d.label,
+                labelEn: d.labelEn,
+                labelTh: d.labelTh,
                 sortOrder: d.sortOrder ?? i,
               })),
             }

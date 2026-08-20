@@ -29,7 +29,7 @@ import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { ChangePasswordDto } from '../auth/dto/auth.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { UserQueryDto } from './dto/user-query.dto';
 import { UserResponseDto } from '../common/dto/user-response.dto';
 import {
   CreateUserDto,
@@ -57,7 +57,7 @@ export class UsersController {
   @CheckPolicies(can(Action.Read, 'User'))
   @ApiOperation({ summary: 'List users' })
   @ApiPaginatedOkResponse(UserResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: UserQueryDto) {
     return this.users.findAll(query);
   }
 

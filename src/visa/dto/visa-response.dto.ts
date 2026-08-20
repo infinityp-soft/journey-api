@@ -10,7 +10,10 @@ export class VisaDocumentResponseDto {
   visaServiceId: string;
 
   @ApiProperty()
-  label: string;
+  labelEn: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  labelTh: string | null;
 
   @ApiProperty()
   sortOrder: number;
@@ -21,13 +24,19 @@ export class VisaServiceResponseDto {
   id: string;
 
   @ApiProperty()
-  title: string;
+  titleEn: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  titleTh: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   country: string | null;
 
   @ApiPropertyOptional({ nullable: true })
-  descriptionHtml: string | null;
+  descriptionHtmlEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  descriptionHtmlTh: string | null;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   headerImageId: string | null;

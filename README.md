@@ -94,7 +94,26 @@ Send `Authorization: Bearer <accessToken>`. Global `JwtAuthGuard`; public routes
 | Videos | `/api/videos` (+ `/page-settings`) |
 | Events | `/api/events` (+ `/:id/registrations`) |
 | Leads | `/api/leads` (+ public `/submit`) |
-| Settings | `/api/settings` (+ `/social-links`) |
+| Settings | `/api/settings` (+ `/social-links`, `/pre-footer-highlights`) |
+
+### List query parameters
+
+Every list endpoint accepts `page`, `limit`, `sort`, `order`, `search`, plus
+`dateFrom` / `dateTo` (a bare `YYYY-MM-DD` upper bound covers the whole day).
+Modules add their own equality filters on top:
+
+| Endpoint | Extra filters |
+|---|---|
+| `/api/users` | `role`, `isActive` |
+| `/api/banners` | `isActive` |
+| `/api/staff` | `status`, `isVisible` |
+| `/api/destinations` | `status` |
+| `/api/articles` | `status`, `categoryId`, `isVisible` |
+| `/api/visa-services` | `status`, `country` |
+| `/api/testimonials` | `status`, `isFeatured`, `counselorId` |
+| `/api/videos` | `status` |
+| `/api/events` | `status`, `format` (dates apply to `eventStartAt`) |
+| `/api/leads` | `status`, `topic` (dates apply to `submittedAt`) |
 
 Schema source of truth: `prisma/schema.prisma`.  
 ER diagram: [`prisma/ERD.md`](./prisma/ERD.md).

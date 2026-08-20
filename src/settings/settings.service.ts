@@ -1,14 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  CreatePreFooterHighlightDto,
   CreateSocialLinkDto,
+  UpdatePreFooterHighlightDto,
   UpdateSiteSettingsDto,
   UpdateSocialLinkDto,
 } from './dto/settings.dto';
 
+/** The pre-footer CTA design has room for exactly three checklist rows. */
+const MAX_PRE_FOOTER_HIGHLIGHTS = 3;
+
 const SETTINGS_INCLUDE = {
   contactCoverImage: true,
   logo: true,
+  preFooterHighlights: { orderBy: { sortOrder: 'asc' as const } },
 } as const;
 
 @Injectable()
@@ -44,6 +54,43 @@ export class SettingsService {
       select: { siteVisits: true },
     });
     return updated;
+  }
+
+  // --- Pre-footer CTA checklist ---
+  async addPreFooterHighlight(dto: CreatePreFooterHighlightDto) {
+    const settings = await this.getSettings();
+    const count = await this.prisma.preFooterHighlight.count({
+      where: { siteSettingsId: settings.id },
+    });
+    if (count >= MAX_PRE_FOOTER_HIGHLIGHTS) {
+      throw new BadRequestException(
+        `A maximum of ${MAX_PRE_FOOTER_HIGHLIGHTS} highlights is allowed`,
+      );
+    }
+    return this.prisma.preFooterHighlight.create({
+      data: { ...dto, siteSettingsId: settings.id },
+    });
+  }
+
+  async updatePreFooterHighlight(
+    id: string,
+    dto: UpdatePreFooterHighlightDto,
+  ) {
+    await this.findPreFooterHighlight(id);
+    return this.prisma.preFooterHighlight.update({ where: { id }, data: dto });
+  }
+
+  async removePreFooterHighlight(id: string) {
+    await this.findPreFooterHighlight(id);
+    await this.prisma.preFooterHighlight.delete({ where: { id } });
+  }
+
+  private async findPreFooterHighlight(id: string) {
+    const highlight = await this.prisma.preFooterHighlight.findUnique({
+      where: { id },
+    });
+    if (!highlight) throw new NotFoundException('Highlight not found');
+    return highlight;
   }
 
   // --- Social links ---

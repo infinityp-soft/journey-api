@@ -4,9 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { buildWhere } from '../common/crud/build-where';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserQueryDto } from './dto/user-query.dto';
 import { CreateUserDto, UpdateProfileDto, UpdateUserDto } from './dto/user.dto';
 
 /** Never leak the password hash to API responses. */
@@ -39,17 +41,23 @@ export class UsersService {
     return sanitize(user);
   }
 
-  async findAll(query: PaginationQueryDto) {
+  async findAll(query: UserQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const where = buildWhere<Prisma.UserWhereInput>(query, {
+      searchable: ['name', 'email'],
+      filterable: ['role', 'isActive'],
+      dateField: 'createdAt',
+    });
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
+        where,
         include: { avatar: true },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
     return {
       data: data.map(sanitize),

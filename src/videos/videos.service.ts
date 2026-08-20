@@ -8,6 +8,9 @@ export class VideosService extends BasePrismaService {
   constructor(private readonly prisma: PrismaService) {
     super(prisma.video, {
       include: { thumbnail: true },
+      searchable: ['titleEn', 'titleTh'],
+      filterable: ['status'],
+      dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
     });
   }

@@ -23,11 +23,14 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import {
+  CreatePreFooterHighlightDto,
   CreateSocialLinkDto,
+  UpdatePreFooterHighlightDto,
   UpdateSiteSettingsDto,
   UpdateSocialLinkDto,
 } from './dto/settings.dto';
 import {
+  PreFooterHighlightResponseDto,
   SiteSettingsResponseDto,
   SocialLinkResponseDto,
 } from './dto/settings-response.dto';
@@ -54,6 +57,34 @@ export class SettingsController {
   @ApiOkResponse({ type: SiteSettingsResponseDto })
   updateSettings(@Body() dto: UpdateSiteSettingsDto) {
     return this.service.updateSettings(dto);
+  }
+
+  @Post('pre-footer-highlights')
+  @CheckPolicies(can(Action.Create, 'PreFooterHighlight'))
+  @ApiOperation({ summary: 'Add a pre-footer CTA checklist row (max 3)' })
+  @ApiCreatedResponse({ type: PreFooterHighlightResponseDto })
+  addPreFooterHighlight(@Body() dto: CreatePreFooterHighlightDto) {
+    return this.service.addPreFooterHighlight(dto);
+  }
+
+  @Patch('pre-footer-highlights/:id')
+  @CheckPolicies(can(Action.Update, 'PreFooterHighlight'))
+  @ApiOperation({ summary: 'Update a pre-footer CTA checklist row' })
+  @ApiOkResponse({ type: PreFooterHighlightResponseDto })
+  updatePreFooterHighlight(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePreFooterHighlightDto,
+  ) {
+    return this.service.updatePreFooterHighlight(id, dto);
+  }
+
+  @Delete('pre-footer-highlights/:id')
+  @HttpCode(204)
+  @CheckPolicies(can(Action.Delete, 'PreFooterHighlight'))
+  @ApiOperation({ summary: 'Delete a pre-footer CTA checklist row' })
+  @ApiNoContentResponse()
+  removePreFooterHighlight(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.removePreFooterHighlight(id);
   }
 
   @Get('social-links')

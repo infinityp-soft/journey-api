@@ -1,6 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({ example: 1, default: 1 })
@@ -32,6 +40,23 @@ export class PaginationQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-01-01',
+    description: 'Inclusive lower bound on the list’s date column',
+  })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-12-31',
+    description:
+      'Inclusive upper bound. A date without a time covers the whole day.',
+  })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
 }
 
 export interface PaginatedResult<T> {

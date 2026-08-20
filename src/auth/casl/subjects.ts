@@ -30,12 +30,13 @@ export type AppSubject =
   | 'Lead'
   | 'SiteSettings'
   | 'SocialLink'
+  | 'PreFooterHighlight'
   | 'all';
 
 /**
  * Content subjects an Editor is allowed to fully manage (create/read/update/
  * delete/publish). Excludes system config (User, SiteSettings, SocialLink,
- * ActivityLog) which stays admin-only for writes.
+ * PreFooterHighlight, ActivityLog) which stays admin-only for writes.
  */
 export const EDITOR_CONTENT_SUBJECTS: AppSubject[] = [
   'Media',

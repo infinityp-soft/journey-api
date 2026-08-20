@@ -15,7 +15,12 @@ import { SimpleStatus } from '../../common/enums';
 export class VisaDocumentDto {
   @ApiProperty()
   @IsString()
-  label: string;
+  labelEn: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  labelTh?: string;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
@@ -27,7 +32,12 @@ export class VisaDocumentDto {
 export class CreateVisaServiceDto {
   @ApiProperty()
   @IsString()
-  title: string;
+  titleEn: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  titleTh?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -37,7 +47,12 @@ export class CreateVisaServiceDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  descriptionHtml?: string;
+  descriptionHtmlEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  descriptionHtmlTh?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()

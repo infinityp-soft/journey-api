@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PublishStatus } from '../common/enums';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { buildWhere } from '../common/crud/build-where';
 import { slugify } from '../common/utils/slugify';
 import { PrismaService } from '../prisma/prisma.service';
+import { ArticleQueryDto } from './dto/article-query.dto';
 import { CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
 
 const ARTICLE_INCLUDE = {
@@ -40,17 +42,14 @@ export class ArticlesService {
     });
   }
 
-  async findAll(query: PaginationQueryDto) {
+  async findAll(query: ArticleQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const where = query.search
-      ? {
-          OR: [
-            { titleEn: { contains: query.search, mode: 'insensitive' as const } },
-            { titleTh: { contains: query.search, mode: 'insensitive' as const } },
-          ],
-        }
-      : undefined;
+    const where = buildWhere<Prisma.ArticleWhereInput>(query, {
+      searchable: ['titleEn', 'titleTh'],
+      filterable: ['status', 'categoryId', 'isVisible'],
+      dateField: 'createdAt',
+    });
 
     const [data, total] = await Promise.all([
       this.prisma.article.findMany({

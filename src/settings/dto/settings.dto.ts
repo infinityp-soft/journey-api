@@ -85,7 +85,83 @@ export class UpdateSiteSettingsDto {
   @IsInt()
   @Min(0)
   siteVisits?: number;
+
+  // --- Pre-footer CTA band ---
+  @ApiPropertyOptional({ description: 'Show the pre-footer CTA on the site' })
+  @IsOptional()
+  @IsBoolean()
+  preFooterEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterTitleEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterTitleTh?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterDescriptionEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterDescriptionTh?: string;
+
+  @ApiPropertyOptional({
+    enum: SocialPlatform,
+    description: 'Channel the CTA button points at, e.g. line',
+  })
+  @IsOptional()
+  @IsEnum(SocialPlatform)
+  preFooterCtaPlatform?: SocialPlatform;
+
+  @ApiPropertyOptional({ example: 'Add us on LINE' })
+  @IsOptional()
+  @IsString()
+  preFooterCtaLabelEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterCtaLabelTh?: string;
+
+  @ApiPropertyOptional({ example: 'https://line.me/R/ti/p/@journey' })
+  @IsOptional()
+  @IsString()
+  preFooterCtaUrl?: string;
 }
+
+export class CreatePreFooterHighlightDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  textEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  textTh?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isEnabled?: boolean;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  sortOrder?: number;
+}
+
+export class UpdatePreFooterHighlightDto extends PartialType(
+  CreatePreFooterHighlightDto,
+) {}
 
 export class CreateSocialLinkDto {
   @ApiProperty({ enum: SocialPlatform })
