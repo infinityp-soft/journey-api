@@ -17,7 +17,7 @@ erDiagram
 
     media_assets ||--o{ banners : image
     media_assets ||--o{ staff_members : photo
-    media_assets ||--o{ destinations : cover
+    media_assets ||--o{ destinations : "cover / flag"
     media_assets ||--o{ articles : featured
     media_assets ||--o{ about_us : team_header
     media_assets ||--o{ visa_services : header
@@ -100,6 +100,7 @@ erDiagram
         text name_en
         text name_th
         uuid cover_image_id FK
+        uuid flag_image_id FK
         publish_status status
     }
 

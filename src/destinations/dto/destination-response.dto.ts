@@ -30,6 +30,12 @@ export class DestinationResponseDto {
   @ApiPropertyOptional({ type: MediaAssetResponseDto, nullable: true })
   coverImage?: MediaAssetResponseDto | null;
 
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  flagImageId: string | null;
+
+  @ApiPropertyOptional({ type: MediaAssetResponseDto, nullable: true })
+  flagImage?: MediaAssetResponseDto | null;
+
   @ApiProperty({ enum: PublishStatus })
   status: PublishStatus;
 

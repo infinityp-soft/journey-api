@@ -44,6 +44,14 @@ export class CreateDestinationDto {
   @IsUUID()
   coverImageId?: string;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Square country flag (uploaded via /api/media-assets)',
+  })
+  @IsOptional()
+  @IsUUID()
+  flagImageId?: string;
+
   @ApiPropertyOptional({ enum: PublishStatus })
   @IsOptional()
   @IsEnum(PublishStatus)

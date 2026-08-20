@@ -276,7 +276,7 @@ All image FKs point to `media_assets` (`ON DELETE SET NULL`). Files live on disk
 | `banners` | Homepage | → image |
 | `about_us` | Singleton bio | highlights, team header image |
 | `staff_members` | Team | photo; testimonials as counselor |
-| `destinations` | Study destinations | cover; PublishStatus |
+| `destinations` | Study destinations | cover + country flag; PublishStatus |
 | `articles` | Blog | category, author, featured image |
 | `visa_services` | Visa pages (bilingual) | cascade `visa_documents` |
 | `testimonials` | Reviews | counselor, portrait |

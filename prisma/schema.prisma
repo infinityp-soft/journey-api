@@ -118,7 +118,8 @@ model MediaAsset {
   avatarUsers          User[]              @relation("UserAvatar")
   bannerImages         Banner[]
   staffPhotos          StaffMember[]
-  destinationCovers    Destination[]
+  destinationCovers    Destination[]       @relation("DestinationCover")
+  destinationFlags     Destination[]       @relation("DestinationFlag")
   aboutHeaders         AboutUs[]
   articleFeatured      Article[]
   visaHeaders          VisaService[]
@@ -280,7 +281,9 @@ model Destination {
   contentEn    String?       @map("content_en")
   contentTh    String?       @map("content_th")
   coverImageId String?       @map("cover_image_id") @db.Uuid
-  coverImage   MediaAsset?   @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+  coverImage   MediaAsset?   @relation("DestinationCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  flagImageId  String?       @map("flag_image_id") @db.Uuid
+  flagImage    MediaAsset?   @relation("DestinationFlag", fields: [flagImageId], references: [id], onDelete: SetNull)
   status       PublishStatus @default(draft)
   sortOrder    Int           @default(0) @map("sort_order")
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)

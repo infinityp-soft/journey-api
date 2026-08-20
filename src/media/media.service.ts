@@ -19,6 +19,7 @@ const MEDIA_REFERENCES: Array<[string, string]> = [
   ['banners', 'image_id'],
   ['staff_members', 'photo_id'],
   ['destinations', 'cover_image_id'],
+  ['destinations', 'flag_image_id'],
   ['articles', 'featured_image_id'],
   ['about_us', 'team_header_image_id'],
   ['visa_services', 'header_image_id'],
