@@ -8,6 +8,8 @@ export class TestimonialsService extends BasePrismaService {
     super(prisma.testimonial, {
       include: { portraitImage: true, counselor: true },
       searchable: ['studentNameEn', 'studentNameTh', 'locationEn'],
+      filterable: ['status', 'isFeatured', 'counselorId'],
+      dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
     });
   }

@@ -7,6 +7,8 @@ export class LeadsService extends BasePrismaService {
   constructor(prisma: PrismaService) {
     super(prisma.lead, {
       searchable: ['fullName', 'email', 'leadCode'],
+      filterable: ['status', 'topic'],
+      dateField: 'submittedAt',
       defaultOrder: { submittedAt: 'desc' },
     });
   }

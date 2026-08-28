@@ -32,15 +32,15 @@ flowchart LR
 
   subgraph data [Data]
     PG[(PostgreSQL)]
-    Vol[Upload volume UPLOAD_DIR]
+    Store[Media store: RustFS bucket or UPLOAD_DIR]
   end
 
   Admin -->|Bearer JWT /api/*| Main
   Site -->|Public: leads, registrations, visits| Main
   Main --> Guards --> Ctrl --> Svc
   Svc --> PG
-  Svc -->|images| Vol
-  Vol -->|GET /media/*| Site
+  Svc -->|images| Store
+  Store -->|GET /media/*| Site
   Ctrl --> IX
 ```
 
@@ -96,7 +96,7 @@ sequenceDiagram
 | Role | Capability |
 |---|---|
 | `admin` | `manage all` |
-| `editor` | Full content CRUD/publish; cannot manage users/settings/social; can update own user |
+| `editor` | Full content CRUD/publish; cannot manage users/settings/social/pre-footer CTA; can update own user |
 | `viewer` | Read-all; update own user |
 
 **Key files:** `src/auth/auth.controller.ts`, `src/auth/auth.service.ts`, `src/auth/strategies/jwt.strategy.ts`, `src/auth/casl/`
@@ -142,14 +142,19 @@ sequenceDiagram
 **Auth:** JWT + `Action.Create` on Media
 
 1. `POST /api/media-assets` multipart field `file`
-2. Validate mime → sharp → WebP → `$UPLOAD_DIR/yyyy/mm/dd/{uuid}.webp`
+2. Validate mime → sharp → WebP → `StorageDriver.put('yyyy/mm/dd/{uuid}.webp')`
 3. Insert `media_assets` row (`storageKey`, dimensions, checksum)
 4. Client stores returned `id` as `featuredImageId` / `coverImageId` on content
-5. Nightly `MediaGarbageCollector` deletes orphans older than 24h
+5. `GET /media/{storageKey}` streams the object back out of the same driver
+6. Nightly `MediaGarbageCollector` deletes orphans older than 24h
+
+`MEDIA_DRIVER` selects the driver — `local` (a mounted volume) or `rustfs` (an
+S3-compatible bucket, reached with the AWS SDK). Only the driver changes: keys,
+URLs and `media_assets` rows are identical either way.
 
 **Endpoints:** `POST /api/media-assets`, `GET /media/{storageKey}`
 
-**Files:** `src/media/media.controller.ts`, `src/media/media.service.ts`, `src/media/media.gc.ts`
+**Files:** `src/media/media.controller.ts`, `src/media/media.service.ts`, `src/media/media-files.controller.ts`, `src/media/storage/`, `src/media/media.gc.ts`
 
 ---
 
@@ -197,6 +202,26 @@ sequenceDiagram
 
 ---
 
+### G. Global settings → pre-footer CTA
+
+**Auth:** JWT + `Action.Update` on `SiteSettings` (admin only)
+
+1. `GET /api/settings` returns the singleton with `preFooterHighlights` included,
+   ordered by `sortOrder`
+2. `PATCH /api/settings` updates the band itself — bilingual title/description,
+   `preFooterEnabled`, and the CTA button (`preFooterCtaPlatform`,
+   `preFooterCtaLabelEn/Th`, `preFooterCtaUrl`)
+3. The checklist rows are managed separately at
+   `/api/settings/pre-footer-highlights`; the service caps them at 3
+4. The marketing site renders the band above the footer, linking the button at
+   the chosen social channel (e.g. LINE)
+
+**Endpoints:** `GET|PATCH /api/settings`, `POST /api/settings/pre-footer-highlights`, `PATCH|DELETE /api/settings/pre-footer-highlights/:id`
+
+**Files:** `src/settings/settings.controller.ts`, `src/settings/settings.service.ts`
+
+---
+
 ## Module → route map
 
 | Module | Base route | Notes |
@@ -216,8 +241,30 @@ sequenceDiagram
 | Videos | `/api/videos` | + page-settings |
 | Events | `/api/events` | + public registrations |
 | Leads | `/api/leads` | + public `/submit` |
-| Settings | `/api/settings` | + social-links |
+| Settings | `/api/settings` | + social-links, pre-footer-highlights |
 | Analytics | `/api/analytics/visit` | public counter |
+
+---
+
+## List filtering
+
+Every list endpoint shares one query contract, assembled by `buildWhere()` and
+fed into Prisma as a single `where`:
+
+| Param | Applies to |
+|---|---|
+| `page`, `limit` | Pagination |
+| `sort`, `order` | Ordering (falls back to each module's default) |
+| `search` | Case-insensitive `contains` across the module's searchable columns |
+| `dateFrom`, `dateTo` | The module's date column; a bare `YYYY-MM-DD` upper bound covers the whole day |
+| module filters | Equality match — `status`, `topic`, `categoryId`, `isActive`, … |
+
+Modules backed by `BasePrismaService` declare `searchable` / `filterable` /
+`dateField` in their constructor; custom services (articles, events, visa,
+users) call `buildWhere()` directly. Allowed filters per endpoint are listed in
+[`README.md`](../README.md#list-query-parameters).
+
+**Files:** `src/common/crud/build-where.ts`, `src/common/crud/base-prisma.service.ts`, `src/common/dto/pagination-query.dto.ts`
 
 ---
 
@@ -234,14 +281,15 @@ All image FKs point to `media_assets` (`ON DELETE SET NULL`). Files live on disk
 | `banners` | Homepage | → image |
 | `about_us` | Singleton bio | highlights, team header image |
 | `staff_members` | Team | photo; testimonials as counselor |
-| `destinations` | Study destinations | cover; PublishStatus |
+| `destinations` | Study destinations | cover + country flag; PublishStatus |
 | `articles` | Blog | category, author, featured image |
-| `visa_services` | Visa pages | cascade `visa_documents` |
+| `visa_services` | Visa pages (bilingual) | cascade `visa_documents` |
 | `testimonials` | Reviews | counselor, portrait |
 | `videos` | Video page | YouTube + thumbnail |
 | `events` | Events + RSVP | form_fields, registrations |
 | `leads` | Inquiries | topic/status; `lead_code` |
-| `site_settings` | Contact/SEO/visits | logo + contact cover |
+| `site_settings` | Contact/SEO/visits/pre-footer CTA | logo + contact cover; cascade `pre_footer_highlights` |
+| `pre_footer_highlights` | Pre-footer CTA checklist | → site_settings (cascade) |
 | `social_links` | Footer/social | platform enum |
 
 ---
@@ -253,7 +301,10 @@ All image FKs point to `media_assets` (`ON DELETE SET NULL`). Files live on disk
 | `DATABASE_URL` | Postgres for Prisma |
 | `JWT_ACCESS_SECRET` / `JWT_ACCESS_TTL` | Access token |
 | `JWT_REFRESH_SECRET` / `JWT_REFRESH_TTL` | Refresh token |
-| `UPLOAD_DIR` | Disk path for images |
+| `MEDIA_DRIVER` | `local` (volume) or `rustfs` (S3 bucket) |
+| `UPLOAD_DIR` | Disk path for images — `local` only |
+| `RUSTFS_ENDPOINT` / `RUSTFS_BUCKET` | RustFS S3 API and bucket — `rustfs` only |
+| `RUSTFS_ACCESS_KEY` / `RUSTFS_SECRET_KEY` | RustFS credentials — `rustfs` only |
 | `PUBLIC_MEDIA_URL` | Public media base URL |
 | `MAX_UPLOAD_MB` | Upload size limit |
 | `SEED_ADMIN_*` | Bootstrap admin via seed |

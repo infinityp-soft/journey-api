@@ -3,6 +3,7 @@ import {
   PaginatedResult,
   PaginationQueryDto,
 } from '../dto/pagination-query.dto';
+import { buildWhere, WhereOptions } from './build-where';
 
 /**
  * Minimal shape shared by every Prisma model delegate (prisma.banner, etc.).
@@ -17,11 +18,9 @@ export interface PrismaDelegate {
   count(args?: any): Promise<number>;
 }
 
-export interface CrudOptions {
+export interface CrudOptions extends WhereOptions {
   /** relations to include on find (Prisma `include`) */
   include?: Record<string, unknown>;
-  /** columns to match with case-insensitive `contains` when ?search= is set */
-  searchable?: string[];
   /** default ordering when no ?sort is given */
   defaultOrder?: Record<string, 'asc' | 'desc'>;
 }
@@ -45,14 +44,7 @@ export class BasePrismaService<T = any> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const where =
-      query.search && this.options.searchable?.length
-        ? {
-            OR: this.options.searchable.map((field) => ({
-              [field]: { contains: query.search, mode: 'insensitive' },
-            })),
-          }
-        : undefined;
+    const where = buildWhere(query, this.options);
 
     const orderBy = query.sort
       ? { [query.sort]: (query.order ?? 'asc').toLowerCase() }

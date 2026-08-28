@@ -24,7 +24,7 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { StaffQueryDto } from './dto/staff-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import { CreateStaffDto, UpdateStaffDto } from './dto/staff.dto';
 import { StaffMemberResponseDto } from './dto/staff-response.dto';
@@ -49,7 +49,7 @@ export class StaffController {
   @CheckPolicies(can(Action.Read, 'Staff'))
   @ApiOperation({ summary: 'List staff members' })
   @ApiPaginatedOkResponse(StaffMemberResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: StaffQueryDto) {
     return this.service.findAll(query);
   }
 

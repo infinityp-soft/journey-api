@@ -4,8 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { buildWhere } from '../common/crud/build-where';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventQueryDto } from './dto/event-query.dto';
 import {
   CreateEventDto,
   CreateEventRegistrationDto,
@@ -43,17 +45,14 @@ export class EventsService {
     });
   }
 
-  async findAll(query: PaginationQueryDto) {
+  async findAll(query: EventQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const where = query.search
-      ? {
-          OR: [
-            { nameEn: { contains: query.search, mode: 'insensitive' as const } },
-            { nameTh: { contains: query.search, mode: 'insensitive' as const } },
-          ],
-        }
-      : undefined;
+    const where = buildWhere<Prisma.EventWhereInput>(query, {
+      searchable: ['nameEn', 'nameTh'],
+      filterable: ['status', 'format'],
+      dateField: 'eventStartAt',
+    });
 
     const [data, total] = await Promise.all([
       this.prisma.event.findMany({

@@ -2,6 +2,32 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SocialPlatform } from '@prisma/client';
 import { MediaAssetResponseDto } from '../../common/dto/media-asset-response.dto';
 
+export class PreFooterHighlightResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ format: 'uuid' })
+  siteSettingsId: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  textEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  textTh: string | null;
+
+  @ApiProperty()
+  isEnabled: boolean;
+
+  @ApiProperty()
+  sortOrder: number;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt: Date;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  updatedAt: Date;
+}
+
 export class SiteSettingsResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
@@ -50,6 +76,36 @@ export class SiteSettingsResponseDto {
 
   @ApiPropertyOptional({ nullable: true })
   defaultSeoDescription: string | null;
+
+  @ApiProperty()
+  preFooterEnabled: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterTitleEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterTitleTh: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterDescriptionEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterDescriptionTh: string | null;
+
+  @ApiPropertyOptional({ enum: SocialPlatform, nullable: true })
+  preFooterCtaPlatform: SocialPlatform | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterCtaLabelEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterCtaLabelTh: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterCtaUrl: string | null;
+
+  @ApiProperty({ type: [PreFooterHighlightResponseDto] })
+  preFooterHighlights: PreFooterHighlightResponseDto[];
 
   @ApiProperty()
   siteVisits: number;

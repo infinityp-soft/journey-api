@@ -25,7 +25,7 @@ import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { LeadQueryDto } from './dto/lead-query.dto';
 import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
 import { LeadResponseDto } from './dto/lead-response.dto';
 import { LeadsService } from './leads.service';
@@ -59,7 +59,7 @@ export class LeadsController {
   @CheckPolicies(can(Action.Read, 'Lead'))
   @ApiOperation({ summary: 'List leads' })
   @ApiPaginatedOkResponse(LeadResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: LeadQueryDto) {
     return this.service.findAll(query);
   }
 

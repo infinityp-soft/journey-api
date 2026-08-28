@@ -7,7 +7,7 @@ erDiagram
 
     media_assets ||--o{ banners : image
     media_assets ||--o{ staff_members : photo
-    media_assets ||--o{ destinations : cover
+    media_assets ||--o{ destinations : "cover / flag"
     media_assets ||--o{ articles : featured
     media_assets ||--o{ about_us : team_header
     media_assets ||--o{ visa_services : header
@@ -18,6 +18,7 @@ erDiagram
     media_assets ||--o{ site_settings : "contact_cover / logo"
 
     about_us ||--o{ about_highlights : contains
+    site_settings ||--o{ pre_footer_highlights : contains
     staff_members ||--o{ testimonials : counselor
     article_categories ||--o{ articles : classifies
     visa_services ||--o{ visa_documents : checklist
@@ -89,6 +90,7 @@ erDiagram
         text name_en
         text name_th
         uuid cover_image_id FK
+        uuid flag_image_id FK
         publish_status status
     }
 
@@ -111,7 +113,8 @@ erDiagram
 
     visa_services {
         uuid id PK
-        text title
+        text title_en
+        text title_th
         text country
         uuid header_image_id FK
         simple_status status
@@ -120,7 +123,8 @@ erDiagram
     visa_documents {
         uuid id PK
         uuid visa_service_id FK
-        text label
+        text label_en
+        text label_th
     }
 
     testimonials {
@@ -182,8 +186,22 @@ erDiagram
         uuid id PK
         uuid logo_id FK
         uuid contact_cover_image_id FK
+        boolean pre_footer_enabled
+        text pre_footer_title_en
+        text pre_footer_title_th
+        social_platform pre_footer_cta_platform
+        text pre_footer_cta_url
         int site_visits
         boolean is_singleton UK
+    }
+
+    pre_footer_highlights {
+        uuid id PK
+        uuid site_settings_id FK
+        text text_en
+        text text_th
+        boolean is_enabled
+        int sort_order
     }
 
     social_links {

@@ -8,6 +8,8 @@ export class BannersService extends BasePrismaService {
     super(prisma.banner, {
       include: { image: true },
       searchable: ['name'],
+      filterable: ['isActive'],
+      dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
     });
   }

@@ -24,7 +24,7 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { BannerQueryDto } from './dto/banner-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
 import { BannersService } from './banners.service';
 import { CreateBannerDto, UpdateBannerDto } from './dto/banner.dto';
@@ -49,7 +49,7 @@ export class BannersController {
   @CheckPolicies(can(Action.Read, 'Banner'))
   @ApiOperation({ summary: 'List banners' })
   @ApiPaginatedOkResponse(BannerResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: BannerQueryDto) {
     return this.service.findAll(query);
   }
 

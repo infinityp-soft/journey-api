@@ -25,6 +25,7 @@ import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { EventQueryDto } from './dto/event-query.dto';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import {
   CreateEventDto,
@@ -58,7 +59,7 @@ export class EventsController {
   @CheckPolicies(can(Action.Read, 'Event'))
   @ApiOperation({ summary: 'List events' })
   @ApiPaginatedOkResponse(EventListItemResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: EventQueryDto) {
     return this.service.findAll(query);
   }
 

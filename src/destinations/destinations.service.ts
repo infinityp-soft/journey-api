@@ -6,8 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class DestinationsService extends BasePrismaService {
   constructor(prisma: PrismaService) {
     super(prisma.destination, {
-      include: { coverImage: true },
+      include: { coverImage: true, flagImage: true },
       searchable: ['nameEn', 'nameTh'],
+      filterable: ['status'],
+      dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
     });
   }

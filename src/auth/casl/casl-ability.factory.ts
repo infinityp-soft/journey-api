@@ -42,6 +42,7 @@ export class CaslAbilityFactory {
         cannot(Action.Delete, 'User');
         cannot(Action.Update, 'SiteSettings');
         cannot(Action.Manage, 'SocialLink');
+        cannot(Action.Manage, 'PreFooterHighlight');
         cannot(Action.Delete, 'ActivityLog');
         break;
       }

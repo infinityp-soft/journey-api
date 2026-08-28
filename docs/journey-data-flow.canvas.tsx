@@ -29,7 +29,8 @@ type FlowId =
   | "media"
   | "leads"
   | "events"
-  | "visits";
+  | "visits"
+  | "settings";
 
 const FLOW_OPTIONS = [
   { value: "auth", label: "Admin login → dashboard" },
@@ -38,6 +39,7 @@ const FLOW_OPTIONS = [
   { value: "leads", label: "Public lead capture" },
   { value: "events", label: "Event registration" },
   { value: "visits", label: "Site visit counter" },
+  { value: "settings", label: "Global settings → pre-footer CTA" },
 ];
 
 const FLOWS: Record<
@@ -98,14 +100,18 @@ const FLOWS: Record<
     auth: "JWT + Action.Create on Media",
     steps: [
       "POST /api/media-assets multipart field file",
-      "Validate mime → sharp → WebP → UPLOAD_DIR/yyyy/mm/dd/{uuid}.webp",
+      "Validate mime → sharp → WebP → StorageDriver.put(yyyy/mm/dd/{uuid}.webp)",
+      "MEDIA_DRIVER picks the store: local volume or RustFS bucket (S3)",
       "Insert media_assets row (storageKey, dimensions, checksum)",
       "Client stores returned id as featuredImageId / coverImageId on content",
+      "GET /media/{storageKey} streams the object back out of the same driver",
       "Nightly MediaGarbageCollector deletes orphans older than 24h",
     ],
     files: [
       "src/media/media.controller.ts",
       "src/media/media.service.ts",
+      "src/media/media-files.controller.ts",
+      "src/media/storage/",
       "src/media/media.gc.ts",
     ],
     endpoints: [
@@ -167,6 +173,26 @@ const FLOWS: Record<
       "GET /api/dashboard/summary",
     ],
   },
+  settings: {
+    title: "Global settings → pre-footer CTA",
+    auth: "JWT + Action.Update on SiteSettings (admin only)",
+    steps: [
+      "GET /api/settings returns the singleton with preFooterHighlights ordered by sortOrder",
+      "PATCH /api/settings edits the bilingual title/description and preFooterEnabled",
+      "CTA button stores preFooterCtaPlatform (e.g. line), label and destination URL",
+      "Checklist rows are managed separately and capped at 3 by the service",
+      "Marketing site renders the band above the footer",
+    ],
+    files: [
+      "src/settings/settings.controller.ts",
+      "src/settings/settings.service.ts",
+    ],
+    endpoints: [
+      "GET|PATCH /api/settings",
+      "POST /api/settings/pre-footer-highlights",
+      "PATCH|DELETE /api/settings/pre-footer-highlights/:id",
+    ],
+  },
 };
 
 const ARCH_NODES = [
@@ -176,7 +202,7 @@ const ARCH_NODES = [
   { id: "guards", label: "JWT + CASL" },
   { id: "svc", label: "Services" },
   { id: "pg", label: "PostgreSQL" },
-  { id: "disk", label: "Upload volume" },
+  { id: "disk", label: "RustFS / volume" },
   { id: "media", label: "GET /media" },
 ];
 
@@ -409,12 +435,12 @@ export default function JourneyDataFlow() {
             ["Staff", "/api/staff", "team members"],
             ["Destinations", "/api/destinations", "PublishStatus"],
             ["Articles", "/api/articles", "+ /article-categories"],
-            ["Visa", "/api/visa-services", "+ documents"],
+            ["Visa", "/api/visa-services", "+ documents (bilingual)"],
             ["Testimonials", "/api/testimonials", "counselor FK"],
             ["Videos", "/api/videos", "+ page-settings"],
             ["Events", "/api/events", "+ public registrations"],
             ["Leads", "/api/leads", "+ public /submit"],
-            ["Settings", "/api/settings", "+ social-links"],
+            ["Settings", "/api/settings", "+ social-links, pre-footer-highlights"],
             ["Analytics", "/api/analytics/visit", "public counter"],
           ]}
         />
@@ -437,8 +463,8 @@ export default function JourneyDataFlow() {
             </CardHeader>
             <CardBody>
               <Text size="small">
-                Full content CRUD/publish; no users/settings/social; can update
-                own user
+                Full content CRUD/publish; no users/settings/social/pre-footer
+                CTA; can update own user
               </Text>
             </CardBody>
           </Card>
@@ -469,14 +495,15 @@ export default function JourneyDataFlow() {
               ["banners", "Homepage", "→ image"],
               ["about_us", "Singleton bio", "highlights, team header image"],
               ["staff_members", "Team", "photo; testimonials as counselor"],
-              ["destinations", "Study destinations", "cover; PublishStatus"],
+              ["destinations", "Study destinations", "cover + country flag; PublishStatus"],
               ["articles", "Blog", "category, author, featured image"],
-              ["visa_services", "Visa pages", "cascade visa_documents"],
+              ["visa_services", "Visa pages (bilingual)", "cascade visa_documents"],
               ["testimonials", "Reviews", "counselor, portrait"],
               ["videos", "Video page", "YouTube + thumbnail"],
               ["events", "Events + RSVP", "form_fields, registrations"],
               ["leads", "Inquiries", "topic/status; lead_code"],
-              ["site_settings", "Contact/SEO/visits", "logo + contact cover"],
+              ["site_settings", "Contact/SEO/visits/pre-footer CTA", "logo + contact cover; cascade pre_footer_highlights"],
+              ["pre_footer_highlights", "Pre-footer CTA checklist", "→ site_settings (cascade)"],
               ["social_links", "Footer/social", "platform enum"],
             ]}
           />
@@ -513,7 +540,10 @@ export default function JourneyDataFlow() {
             ["DATABASE_URL", "Postgres for Prisma"],
             ["JWT_ACCESS_SECRET / TTL", "Access token"],
             ["JWT_REFRESH_SECRET / TTL", "Refresh token"],
-            ["UPLOAD_DIR", "Disk path for images"],
+            ["MEDIA_DRIVER", "local (volume) or rustfs (S3 bucket)"],
+            ["UPLOAD_DIR", "Disk path for images — local only"],
+            ["RUSTFS_ENDPOINT / BUCKET", "RustFS S3 API and bucket — rustfs only"],
+            ["RUSTFS_ACCESS_KEY / SECRET_KEY", "RustFS credentials — rustfs only"],
             ["PUBLIC_MEDIA_URL", "Public media base URL"],
             ["MAX_UPLOAD_MB", "Upload size limit"],
             ["SEED_ADMIN_*", "Bootstrap admin via seed"],

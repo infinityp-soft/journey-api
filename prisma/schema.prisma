@@ -118,7 +118,8 @@ model MediaAsset {
   avatarUsers          User[]              @relation("UserAvatar")
   bannerImages         Banner[]
   staffPhotos          StaffMember[]
-  destinationCovers    Destination[]
+  destinationCovers    Destination[]       @relation("DestinationCover")
+  destinationFlags     Destination[]       @relation("DestinationFlag")
   aboutHeaders         AboutUs[]
   articleFeatured      Article[]
   visaHeaders          VisaService[]
@@ -280,7 +281,9 @@ model Destination {
   contentEn    String?       @map("content_en")
   contentTh    String?       @map("content_th")
   coverImageId String?       @map("cover_image_id") @db.Uuid
-  coverImage   MediaAsset?   @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+  coverImage   MediaAsset?   @relation("DestinationCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  flagImageId  String?       @map("flag_image_id") @db.Uuid
+  flagImage    MediaAsset?   @relation("DestinationFlag", fields: [flagImageId], references: [id], onDelete: SetNull)
   status       PublishStatus @default(draft)
   sortOrder    Int           @default(0) @map("sort_order")
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -344,19 +347,22 @@ model Article {
 // Visa services + document checklist
 // ---------------------------------------------------------------------------
 model VisaService {
-  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String
-  country         String?
-  descriptionHtml String?      @map("description_html")
-  headerImageId   String?      @map("header_image_id") @db.Uuid
-  headerImage     MediaAsset?  @relation(fields: [headerImageId], references: [id], onDelete: SetNull)
-  status          SimpleStatus @default(active)
-  sortOrder       Int          @default(0) @map("sort_order")
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titleEn           String       @map("title_en")
+  titleTh           String?      @map("title_th")
+  country           String?
+  descriptionHtmlEn String?      @map("description_html_en")
+  descriptionHtmlTh String?      @map("description_html_th")
+  headerImageId     String?      @map("header_image_id") @db.Uuid
+  headerImage       MediaAsset?  @relation(fields: [headerImageId], references: [id], onDelete: SetNull)
+  status            SimpleStatus @default(active)
+  sortOrder         Int          @default(0) @map("sort_order")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   documents VisaDocument[]
 
+  @@index([status])
   @@index([sortOrder])
   @@map("visa_services")
 }
@@ -365,7 +371,8 @@ model VisaDocument {
   id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   visaServiceId String      @map("visa_service_id") @db.Uuid
   visaService   VisaService @relation(fields: [visaServiceId], references: [id], onDelete: Cascade)
-  label         String
+  labelEn       String      @map("label_en")
+  labelTh       String?     @map("label_th")
   sortOrder     Int         @default(0) @map("sort_order")
 
   @@index([visaServiceId])
@@ -540,12 +547,43 @@ model SiteSettings {
   footerBioTh           String?     @map("footer_bio_th")
   defaultSeoTitle       String?     @map("default_seo_title")
   defaultSeoDescription String?     @map("default_seo_description")
+
+  // Pre-footer CTA band shown above the site footer. The checklist lives in
+  // pre_footer_highlights; the button points at one social channel (e.g. LINE).
+  preFooterEnabled       Boolean         @default(true) @map("pre_footer_enabled")
+  preFooterTitleEn       String?         @map("pre_footer_title_en")
+  preFooterTitleTh       String?         @map("pre_footer_title_th")
+  preFooterDescriptionEn String?         @map("pre_footer_description_en")
+  preFooterDescriptionTh String?         @map("pre_footer_description_th")
+  preFooterCtaPlatform   SocialPlatform? @map("pre_footer_cta_platform")
+  preFooterCtaLabelEn    String?         @map("pre_footer_cta_label_en")
+  preFooterCtaLabelTh    String?         @map("pre_footer_cta_label_th")
+  preFooterCtaUrl        String?         @map("pre_footer_cta_url")
+
   // Dashboard "Site Visits" counter (public site can increment).
   siteVisits            Int         @default(0) @map("site_visits")
   isSingleton           Boolean     @unique @default(true) @map("is_singleton")
   updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  preFooterHighlights PreFooterHighlight[]
+
   @@map("site_settings")
+}
+
+/// Checklist rows rendered inside the pre-footer CTA band (max 3).
+model PreFooterHighlight {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  siteSettingsId String       @map("site_settings_id") @db.Uuid
+  siteSettings   SiteSettings @relation(fields: [siteSettingsId], references: [id], onDelete: Cascade)
+  textEn         String?      @map("text_en")
+  textTh         String?      @map("text_th")
+  isEnabled      Boolean      @default(true) @map("is_enabled")
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([siteSettingsId])
+  @@map("pre_footer_highlights")
 }
 
 model SocialLink {

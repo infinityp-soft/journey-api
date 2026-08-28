@@ -8,6 +8,8 @@ export class StaffService extends BasePrismaService {
     super(prisma.staffMember, {
       include: { photo: true },
       searchable: ['fullNameEn', 'fullNameTh', 'email'],
+      filterable: ['status', 'isVisible'],
+      dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
     });
   }

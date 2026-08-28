@@ -2,7 +2,7 @@ node_modules/
 dist/
 .env
 *.log
-storage/
+/storage/
 .DS_Store
 coverage/
 .stitch
