@@ -31,13 +31,33 @@ export class ArticlesService {
 
   async create(dto: CreateArticleDto) {
     const slug = await this.uniqueSlug(dto.slug || dto.titleEn);
+    const data: Record<string, unknown> = {
+      ...dto,
+      slug,
+      publishedAt:
+        dto.status === PublishStatus.published ? new Date() : null,
+    };
+
+    if (dto.categoryId) {
+      const catExists = await this.prisma.articleCategory.findUnique({
+        where: { id: dto.categoryId },
+      });
+      if (!catExists) {
+        delete data.categoryId;
+      }
+    }
+
+    if (dto.featuredImageId) {
+      const imgExists = await this.prisma.mediaAsset.findUnique({
+        where: { id: dto.featuredImageId },
+      });
+      if (!imgExists) {
+        delete data.featuredImageId;
+      }
+    }
+
     return this.prisma.article.create({
-      data: {
-        ...dto,
-        slug,
-        publishedAt:
-          dto.status === PublishStatus.published ? new Date() : null,
-      },
+      data: data as Prisma.ArticleCreateInput,
       include: ARTICLE_INCLUDE,
     });
   }
@@ -86,6 +106,25 @@ export class ArticlesService {
     ) {
       data.publishedAt = new Date();
     }
+
+    if (dto.categoryId) {
+      const catExists = await this.prisma.articleCategory.findUnique({
+        where: { id: dto.categoryId },
+      });
+      if (!catExists) {
+        delete data.categoryId;
+      }
+    }
+
+    if (dto.featuredImageId) {
+      const imgExists = await this.prisma.mediaAsset.findUnique({
+        where: { id: dto.featuredImageId },
+      });
+      if (!imgExists) {
+        delete data.featuredImageId;
+      }
+    }
+
     return this.prisma.article.update({
       where: { id },
       data,
