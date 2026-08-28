@@ -2,6 +2,8 @@ export interface AppConfig {
   env: string;
   port: number;
   apiPrefix: string;
+  /** Max JSON/urlencoded body size in MB (HTML content from rich-text editors). */
+  jsonBodyLimitMb: number;
   databaseUrl: string;
   jwt: {
     accessSecret: string;
@@ -20,6 +22,7 @@ export default (): AppConfig => ({
   env: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3000', 10),
   apiPrefix: process.env.API_PREFIX ?? 'api',
+  jsonBodyLimitMb: parseInt(process.env.JSON_BODY_LIMIT_MB ?? '10', 10),
   databaseUrl:
     process.env.DATABASE_URL ??
     'postgresql://journey:secret@localhost:5432/journey?schema=public',

@@ -2,13 +2,21 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AppConfig } from './config/configuration';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Disable the default 100kb parser so HTML-rich JSON bodies can exceed it.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
   const config = app.get(ConfigService<AppConfig>);
+  const jsonBodyLimit = `${config.get('jsonBodyLimitMb', { infer: true })!}mb`;
+  app.use(json({ limit: jsonBodyLimit }));
+  app.use(urlencoded({ extended: true, limit: jsonBodyLimit }));
 
   const apiPrefix = config.get('apiPrefix', { infer: true })!;
   app.setGlobalPrefix(apiPrefix, { exclude: ['media/(.*)'] });
