@@ -1,0 +1,6 @@
+# Deploy scripts run on Ubuntu — CRLF would break the shebang
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.conf text eol=lf
+*.inc text eol=lf

@@ -15,7 +15,11 @@ WORKDIR /app
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev && npx prisma generate
+# prisma / ts-node are devDependencies, but `migrate deploy` and `db seed` need
+# them at runtime — pin them here so npx cannot pull a mismatched version.
+RUN npm ci --omit=dev \
+ && npm install --no-save prisma@^5.20.0 ts-node@^10.9.2 typescript@^5.5.4 \
+ && npx prisma generate
 COPY --from=build /app/dist ./dist
 COPY scripts ./scripts
 RUN mkdir -p /data/uploads
