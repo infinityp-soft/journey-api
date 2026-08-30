@@ -24,8 +24,10 @@ import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
 import { Public } from '../common/decorators/public.decorator';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
-import { EventQueryDto } from './dto/event-query.dto';
+import {
+  EventQueryDto,
+  EventRegistrationQueryDto,
+} from './dto/event-query.dto';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import {
   CreateEventDto,
@@ -99,7 +101,7 @@ export class EventsController {
   @ApiPaginatedOkResponse(EventRegistrationResponseDto)
   listRegistrations(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query() query: PaginationQueryDto,
+    @Query() query: EventRegistrationQueryDto,
   ) {
     return this.service.listRegistrations(id, query);
   }

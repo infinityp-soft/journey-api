@@ -5,9 +5,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { buildWhere } from '../common/crud/build-where';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { EventQueryDto } from './dto/event-query.dto';
+import {
+  EventQueryDto,
+  EventRegistrationQueryDto,
+} from './dto/event-query.dto';
 import {
   CreateEventDto,
   CreateEventRegistrationDto,
@@ -110,18 +112,27 @@ export class EventsService {
   }
 
   // --- Registrations ---
-  async listRegistrations(eventId: string, query: PaginationQueryDto) {
+  async listRegistrations(eventId: string, query: EventRegistrationQueryDto) {
     await this.findOne(eventId);
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
+    const where: Prisma.EventRegistrationWhereInput = {
+      eventId,
+      ...buildWhere<Prisma.EventRegistrationWhereInput>(query, {
+        searchable: ['firstName', 'lastName', 'email'],
+        filterable: ['areaOfInterest'],
+        dateField: 'registeredAt',
+      }),
+    };
+
     const [data, total] = await Promise.all([
       this.prisma.eventRegistration.findMany({
-        where: { eventId },
+        where,
         orderBy: { registeredAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.eventRegistration.count({ where: { eventId } }),
+      this.prisma.eventRegistration.count({ where }),
     ]);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
