@@ -21,5 +21,5 @@ COPY scripts ./scripts
 RUN mkdir -p /data/uploads
 ENV UPLOAD_DIR=/data/uploads
 EXPOSE 3000
-# Apply pending Prisma migrations (UP), then start the API
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# Migrate is not on boot — run `deploy/migrate.sh` on the server when you want it
+CMD ["node", "dist/main.js"]

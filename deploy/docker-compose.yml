@@ -1,0 +1,101 @@
+# บนเซิร์ฟเวอร์: docker-compose.yml + .env + โฟลเดอร์ nginx/
+# ไม่ต้องมีซอร์ส Nest — API ดึงเป็น image
+#
+#   docker compose pull && docker compose up -d
+
+name: journey
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-etc:/etc/letsencrypt:ro
+    depends_on:
+      - api
+    # มี FE แล้ว: docker compose --profile frontend up -d
+    # แล้วสลับ nginx เป็น frontend.conf (ดู README)
+
+  # Frontend — ไม่สตาร์ทจนกว่าจะเปิด profile
+  web:
+    profiles: ["frontend"]
+    image: ${WEB_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    # ไม่เปิดพอร์ตออกเครื่อง — เข้าผ่าน Nginx /
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-etc:/etc/letsencrypt
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h; done"
+
+  api:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_PREFIX: api
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      MEDIA_DRIVER: rustfs
+      PUBLIC_MEDIA_URL: ${PUBLIC_ORIGIN}/media
+      RUSTFS_ENDPOINT: http://rustfs:9000
+      RUSTFS_REGION: us-east-1
+      RUSTFS_BUCKET: ${RUSTFS_BUCKET}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+      RUSTFS_FORCE_PATH_STYLE: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    # พอร์ต 3000 ไม่เปิดออกเครื่อง — เข้าผ่าน Nginx
+    # ไม่รัน migrate ตอนสตาร์ท — ใช้ sh migrate.sh แยก
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    command: ["/data"]
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_OBS_LOGGER_LEVEL: error
+    volumes:
+      - rustfs:/data
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  rustfs:
+  certbot-www:
+  certbot-etc:

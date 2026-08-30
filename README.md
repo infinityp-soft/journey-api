@@ -27,11 +27,16 @@ npm run start:dev
 
 Swagger UI: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 
-Or with Docker (API runs `prisma migrate deploy` on boot):
+Or with Docker (migrate is **not** on boot — run it yourself):
 
 ```bash
 docker compose up --build
+docker compose run --rm --no-deps api npx prisma migrate deploy
 ```
+
+**Ubuntu production** (API + PostgreSQL + RustFS behind Nginx):
+- Docker Compose: [`deploy/README.md`](./deploy/README.md)
+- ไม่ใช้ Docker: [`deploy/native/README.md`](./deploy/native/README.md)
 
 ## Migrations (up / down)
 
