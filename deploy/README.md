@@ -3,17 +3,16 @@
 Build บนเซิร์ฟเวอร์เอง ไม่ต้องใช้ container registry ไม่ต้องมี CI ค่าใช้จ่ายนอกจาก VPS คือ 0
 
 ```
-Internet → Nginx :8080  (ตั้งค่าที่ HTTP_PORT ใน .env)
-             ├── /api  /media       → api :3000  (NestJS)
-             ├── /_next/static  /   → web :3002  (Next.js standalone)
+Internet → web :8080  (ตั้งค่าที่ HTTP_PORT ใน .env, container :3002)
+             ├── Next.js pages
+             ├── /api  /media  (rewrite ใน next.config) → api :3000
              │
              api ── db     (volume pgdata)
              api ── rustfs (volume rustfs)
 ```
 
-URL ที่ฝังลง frontend bundle เป็น **relative path** (`/api`, `/media`) และ `secure` cookie
-อ่านจาก `X-Forwarded-Proto` ที่ nginx ส่งมา — เปลี่ยน IP หรือเพิ่มโดเมน/TLS ภายหลัง
-**ไม่ต้อง rebuild image**
+URL ที่ฝังลง frontend bundle เป็น **relative path** (`/api`, `/media`)
+เปลี่ยน IP หรือพอร์ตได้โดยไม่ต้อง rebuild image
 
 ---
 
@@ -23,7 +22,7 @@ URL ที่ฝังลง frontend bundle เป็น **relative path** (`/a
 /opt/journey/
   journey-api/        ← ซอร์ส backend
   jourey-web-admin/   ← ซอร์ส frontend
-  deploy/             ← docker-compose.yml + .env + nginx/ + สคริปต์
+  deploy/             ← docker-compose.yml + .env + สคริปต์
 ```
 
 `docker compose` ต้องรันจาก `/opt/journey/deploy` เสมอ เพราะ build context ชี้ไปที่ `../journey-api`
@@ -33,11 +32,8 @@ URL ที่ฝังลง frontend bundle เป็น **relative path** (`/a
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `docker-compose.yml` | นิยาม 5 service — nginx / api / web / db / rustfs |
+| `docker-compose.yml` | นิยาม 4 service — api / web / db / rustfs |
 | `.env.example` | เทมเพลตของ `.env` (`.env` ตัวจริงไม่อยู่ใน git) |
-| `nginx/nginx.conf` | ค่าส่วนกลาง + `client_max_body_size 12m` |
-| `nginx/conf.d/default.conf` | routing `/api` `/media` `/` |
-| `nginx/conf.d/proxy_params.inc` | proxy header ที่ใช้ร่วมกัน — **ห้ามเปลี่ยนเป็น `.conf`** |
 | `upload.ps1` | ส่งซอร์สจาก Windows ขึ้นเซิร์ฟเวอร์ (รันที่เครื่อง dev) |
 | `deploy.sh` | build + สลับ container โดยไม่แตะฐานข้อมูล |
 | `migrate.sh` | `prisma migrate deploy` |
@@ -85,7 +81,7 @@ sudo ufw --force enable
 sudo ufw status verbose
 ```
 
-อย่าเปิด 3000 / 3002 / 5432 / 9000 — ทุกอย่างเข้าผ่าน nginx
+อย่าเปิด 3000 / 5432 / 9000 — เปิดแค่ HTTP_PORT ของ web (ค่าเริ่มต้น 8080)
 
 ถ้าเครื่องมีบริการอื่นถือพอร์ต 80 อยู่ (เช็คด้วย `sudo ss -lptn 'sport = :80'`)
 ให้คง `HTTP_PORT=8080` ไว้ ถ้าเครื่องว่างจะตั้งเป็น `80` แล้ว `ufw allow 80` แทนก็ได้
@@ -145,7 +141,7 @@ nano .env
 กรอกทุกช่องที่เขียนว่า `CHANGE_ME` สร้าง secret ด้วย `openssl rand -hex 32`
 
 ```bash
-docker compose up -d --build   # ครั้งแรก 5-15 นาที
+docker compose up -d --build --remove-orphans   # ครั้งแรก 5-15 นาที
 sh migrate.sh                  # สร้าง schema — API ไม่ migrate ตอนสตาร์ท
 sh seed.sh                     # สร้าง super admin
 docker compose ps              # api / web ต้องขึ้น healthy
@@ -170,8 +166,8 @@ cd D:\journey\journey-api\deploy
 ```
 
 > `-Target web` อัปโหลดแค่โฟลเดอร์ `jourey-web-admin` ซึ่งแปลว่าไฟล์ใน `deploy/`
-> (compose, nginx, สคริปต์) จะไม่ถูก sync เพราะมันอยู่ใน repo `journey-api`
-> รอบไหนแก้ `docker-compose.yml` หรือ config nginx ให้ใช้ `-Target api` หรือไม่ใส่ `-Target` เลย
+> (compose, สคริปต์) จะไม่ถูก sync เพราะมันอยู่ใน repo `journey-api`
+> รอบไหนแก้ `docker-compose.yml` ให้ใช้ `-Target api` หรือไม่ใส่ `-Target` เลย
 
 ข้ามขั้นนี้ได้ถ้าใช้ git บนเซิร์ฟเวอร์ — `deploy.sh` จะ `git pull` ให้เองถ้าโฟลเดอร์นั้นเป็น git repo
 ถ้าไม่ใช่ก็ข้ามไป build เลย
@@ -200,7 +196,7 @@ cd D:\journey\journey-api\deploy
 
 ```bash
 docker compose ps                    # สถานะ + health
-docker compose logs -f api           # log สด (web / nginx / db ก็ได้)
+docker compose logs -f api           # log สด (web / db ก็ได้)
 docker compose logs --tail 200 web
 docker compose restart api           # รีสตาร์ทเฉย ๆ ไม่ build ใหม่
 docker stats --no-stream             # ดู RAM/CPU ที่ใช้จริง
@@ -281,18 +277,12 @@ docker load -i /tmp/journey-images.tar && rm /tmp/journey-images.tar
 
 ## เพิ่มโดเมน + HTTPS ภายหลัง
 
-1. ชี้ A record มาที่ IP
-2. เพิ่ม `- "443:443"` ใน service `nginx` และเพิ่ม service `certbot`
-   พร้อม volume `certbot-www` / `certbot-etc`
-3. ขอใบรับรอง แล้วเพิ่ม `server { listen 443 ssl; ... }` ใน `nginx/conf.d/`
-   โดยก๊อป `location` ชุดเดิมจาก `default.conf` มาใช้
-4. `sudo ufw allow 443`
+ตอนนี้ stack ไม่มี reverse proxy — web ฟัง HTTP ที่ `HTTP_PORT` โดยตรง
+ถ้าจะใส่โดเมน/TLS ภายหลัง ให้วาง Caddy หรือ Cloudflare Tunnel หน้า web
+แล้วส่ง `X-Forwarded-Proto: https` มาด้วย `secure` cookie จะเปิดเอง
 
-`secure` cookie จะเปิดเองเพราะ `X-Forwarded-Proto` กลายเป็น `https`
-ไม่ต้อง rebuild ไม่ต้องแก้โค้ด
-
-ยังไม่อยากจดโดเมนแต่อยากได้ HTTPS มี DuckDNS (subdomain ฟรี + Let's Encrypt)
-หรือ Tailscale Funnel (ได้ hostname `*.ts.net` พร้อม cert แท้ ไม่ต้องเปิดพอร์ตออกเน็ต)
+ยังไม่อยากจดโดเมนแต่อยากได้ HTTPS มี DuckDNS หรือ Tailscale Funnel
+(ได้ hostname `*.ts.net` พร้อม cert แท้ ไม่ต้องเปิดพอร์ตออกเน็ต)
 
 ---
 
@@ -302,11 +292,11 @@ docker load -i /tmp/journey-images.tar && rm /tmp/journey-images.tar
 |---|---|
 | `ufw enable` แล้ว python traceback | มันถามยืนยันแล้วดูดบรรทัดถัดไปมาตอบ — ใช้ `sudo ufw --force enable` และรันทีละบรรทัด |
 | build web โดน `Killed` | RAM ไม่พอ — เพิ่ม swap (ข้อ 2) หรือใช้ท่าส่ง image tar |
-| login แล้วเด้งกลับหน้า login | `X-Forwarded-Proto` ไม่ถูกส่ง — เช็คว่า `proxy_params.inc` ถูก include ครบทุก `location` |
-| รูปไม่ขึ้น | `PUBLIC_MEDIA_URL` ต้องเป็น `/media` และ nginx ต้อง route `/media` ไป api |
-| nginx ไม่ start | `proxy_params.inc` ห้ามตั้งชื่อลงท้าย `.conf` เพราะ `nginx.conf` มี `include conf.d/*.conf` |
+| login แล้วเด้งกลับหน้า login | cookie `secure` เปิดบน HTTP — ต้องไม่มี proxy ส่ง `X-Forwarded-Proto: https` มา |
+| รูปไม่ขึ้น | `PUBLIC_MEDIA_URL` ต้องเป็น `/media` และ `INTERNAL_API_URL` ต้องถูกใส่ตอน `next build` เพื่อให้ rewrite `/media` ไป api |
+| `Invalid Server Actions request` / host ไม่ตรง origin | เข้าผ่านพอร์ตที่ browser ใส่ใน Origin — อย่ามี proxy ตัดพอร์ตออกจาก Host |
 | `pnpm install --frozen-lockfile` fail | `pnpm-lock.yaml` ไม่ตรงกับ `package.json` — รัน `pnpm install` ที่เครื่อง dev แล้ว commit ก่อน |
 | web crash-loop `Cannot find module @swc/helpers` | standalone tracing ตาม symlink ของ pnpm ไม่เจอ — Dockerfile ตั้ง `node-linker=hoisted` แก้ไว้แล้ว ถ้ายังเจอให้ build ด้วย `--no-cache` |
 | `prisma migrate deploy` หา binary ไม่เจอ | image เก่า — `docker compose build api` ใหม่ (Dockerfile pin prisma CLI ไว้แล้ว) |
-| อัปโหลดไฟล์ใหญ่แล้ว 413 | `client_max_body_size` ใน `nginx/nginx.conf` ต้องมากกว่า `MAX_UPLOAD_MB` |
+| อัปโหลดไฟล์ใหญ่แล้ว 413 | `MAX_UPLOAD_MB` ฝั่ง API และ `proxyClientMaxBodySize` ใน `next.config.mjs` |
 | สคริปต์ `.sh` ฟ้อง `\r` | ไฟล์โดนแปลงเป็น CRLF — มี `.gitattributes` บังคับ `eol=lf` ไว้แล้ว ถ้ายังเจอให้รัน `sed -i 's/\r$//' *.sh` |

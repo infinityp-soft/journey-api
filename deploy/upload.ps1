@@ -51,7 +51,7 @@ try {
     scp $uploads "${Server}:/tmp/"
     if ($LASTEXITCODE -ne 0) { throw "scp failed" }
 
-    # Replace the old source, then refresh deploy/ (compose, nginx, scripts).
+    # Replace the old source, then refresh deploy/ (compose, scripts).
     # Sent as a single ssh argument rather than piped to stdin: PowerShell
     # terminates piped input with CRLF, and the stray \r breaks the last command.
     $remote = @(

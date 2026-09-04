@@ -38,7 +38,9 @@ esac
 
 echo "==> building: $SERVICES"
 docker compose build $SERVICES
-docker compose up -d --no-deps $SERVICES
+# ลบโฟลเดอร์ nginx ค้างจาก compose รุ่นเก่า แล้วปิด container ที่ไม่มีในไฟล์แล้ว
+rm -rf ./nginx
+docker compose up -d --no-deps --remove-orphans $SERVICES
 
 docker image prune -f
 docker compose ps
