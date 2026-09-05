@@ -3,12 +3,14 @@
 Build บนเซิร์ฟเวอร์เอง ไม่ต้องใช้ container registry ไม่ต้องมี CI ค่าใช้จ่ายนอกจาก VPS คือ 0
 
 ```
-Internet → web :8080  (ตั้งค่าที่ HTTP_PORT ใน .env, container :3002)
-             ├── Next.js pages
-             ├── /api  /media  (rewrite ใน next.config) → api :3000
-             │
-             api ── db     (volume pgdata)
-             api ── rustfs (volume rustfs)
+Internet
+  ├── :8080  web        (journey-web,     HTTP_PORT)
+  └── :8081  web-admin  (jourey-web-admin, ADMIN_PORT)
+               ├── Next.js pages
+               └── /api  /media  (rewrite) → api :3000
+                     │
+                     api ── db     (volume pgdata)
+                     api ── rustfs (volume rustfs)
 ```
 
 URL ที่ฝังลง frontend bundle เป็น **relative path** (`/api`, `/media`)
@@ -21,18 +23,19 @@ URL ที่ฝังลง frontend bundle เป็น **relative path** (`/a
 ```
 /opt/journey/
   journey-api/        ← ซอร์ส backend
-  jourey-web-admin/   ← ซอร์ส frontend
+  journey-web/        ← เว็บสาธารณะ
+  jourey-web-admin/   ← CMS admin
   deploy/             ← docker-compose.yml + .env + สคริปต์
 ```
 
-`docker compose` ต้องรันจาก `/opt/journey/deploy` เสมอ เพราะ build context ชี้ไปที่ `../journey-api`
-และ `../jourey-web-admin`
+`docker compose` ต้องรันจาก `/opt/journey/deploy` เสมอ เพราะ build context ชี้ไปที่
+`../journey-api` / `../journey-web` / `../jourey-web-admin`
 
 ### ไฟล์ในโฟลเดอร์นี้
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `docker-compose.yml` | นิยาม 4 service — api / web / db / rustfs |
+| `docker-compose.yml` | นิยาม 5 service — api / web / web-admin / db / rustfs |
 | `.env.example` | เทมเพลตของ `.env` (`.env` ตัวจริงไม่อยู่ใน git) |
 | `upload.ps1` | ส่งซอร์สจาก Windows ขึ้นเซิร์ฟเวอร์ (รันที่เครื่อง dev) |
 | `deploy.sh` | build + สลับ container โดยไม่แตะฐานข้อมูล |
@@ -76,12 +79,13 @@ free -h
 
 ```bash
 sudo ufw allow 22
-sudo ufw allow 8080          # ต้องตรงกับ HTTP_PORT ใน .env
+sudo ufw allow 8080          # เว็บสาธารณะ — ต้องตรงกับ HTTP_PORT ใน .env
+sudo ufw allow 8081          # admin CMS — ต้องตรงกับ ADMIN_PORT
 sudo ufw --force enable
 sudo ufw status verbose
 ```
 
-อย่าเปิด 3000 / 5432 / 9000 — เปิดแค่ HTTP_PORT ของ web (ค่าเริ่มต้น 8080)
+อย่าเปิด 3000 / 3001 / 3002 / 5432 / 9000 — เปิดแค่ HTTP_PORT (8080) กับ ADMIN_PORT (8081)
 
 ถ้าเครื่องมีบริการอื่นถือพอร์ต 80 อยู่ (เช็คด้วย `sudo ss -lptn 'sport = :80'`)
 ให้คง `HTTP_PORT=8080` ไว้ ถ้าเครื่องว่างจะตั้งเป็น `80` แล้ว `ufw allow 80` แทนก็ได้
@@ -116,7 +120,8 @@ cd D:\journey\journey-api\deploy
 sudo mkdir -p /opt/journey && sudo chown $USER:$USER /opt/journey
 cd /opt/journey
 git clone <api-repo-url> journey-api
-git clone <web-repo-url> jourey-web-admin
+git clone <site-repo-url> journey-web
+git clone <admin-repo-url> jourey-web-admin
 cp -r journey-api/deploy ./deploy
 ```
 
@@ -126,7 +131,7 @@ cp -r journey-api/deploy ./deploy
 ตรวจก่อนไปต่อ
 
 ```bash
-ls -1 /opt/journey          # ต้องมี 3 โฟลเดอร์
+ls -1 /opt/journey          # ต้องมี 4 โฟลเดอร์
 ls -1 /opt/journey/deploy   # ต้องมี docker-compose.yml
 ```
 
@@ -144,13 +149,14 @@ nano .env
 docker compose up -d --build --remove-orphans   # ครั้งแรก 5-15 นาที
 sh migrate.sh                  # สร้าง schema — API ไม่ migrate ตอนสตาร์ท
 sh seed.sh                     # สร้าง super admin
-docker compose ps              # api / web ต้องขึ้น healthy
+docker compose ps              # api / web / web-admin ต้องขึ้น healthy
 ```
 
-เปิด `http://<IP>:8080/th/login` → login ด้วยค่า `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
+เปิดเว็บสาธารณะที่ `http://<IP>:8080`
+เปิด admin ที่ `http://<IP>:8081/th/login` → login ด้วยค่า `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
 ที่ตั้งไว้ใน `.env`
 
-Swagger อยู่ที่ `http://<IP>:8080/api/docs`
+Swagger อยู่ที่ `http://<IP>:8080/api/docs` หรือ `http://<IP>:8081/api/docs`
 
 ---
 
@@ -160,13 +166,13 @@ Swagger อยู่ที่ `http://<IP>:8080/api/docs`
 
 ```powershell
 cd D:\journey\journey-api\deploy
-.\upload.ps1 -Server root@<IP>              # ทั้งคู่ (ค่าเริ่มต้น)
-.\upload.ps1 -Server root@<IP> -Target api  # เฉพาะ backend
-.\upload.ps1 -Server root@<IP> -Target web  # เฉพาะ frontend
+.\upload.ps1 -Server root@<IP>                   # ทั้งสาม (ค่าเริ่มต้น)
+.\upload.ps1 -Server root@<IP> -Target api       # เฉพาะ backend
+.\upload.ps1 -Server root@<IP> -Target web       # เฉพาะเว็บสาธารณะ (journey-web)
+.\upload.ps1 -Server root@<IP> -Target web-admin # เฉพาะ CMS (jourey-web-admin)
 ```
 
-> `-Target web` อัปโหลดแค่โฟลเดอร์ `jourey-web-admin` ซึ่งแปลว่าไฟล์ใน `deploy/`
-> (compose, สคริปต์) จะไม่ถูก sync เพราะมันอยู่ใน repo `journey-api`
+> `-Target web` / `-Target web-admin` ไม่ sync โฟลเดอร์ `deploy/`
 > รอบไหนแก้ `docker-compose.yml` ให้ใช้ `-Target api` หรือไม่ใส่ `-Target` เลย
 
 ข้ามขั้นนี้ได้ถ้าใช้ git บนเซิร์ฟเวอร์ — `deploy.sh` จะ `git pull` ให้เองถ้าโฟลเดอร์นั้นเป็น git repo
@@ -176,9 +182,10 @@ cd D:\journey\journey-api\deploy
 
 | ทำอะไร | คำสั่ง | แตะ DB ไหม |
 |---|---|---|
-| อัปทั้งคู่ | `sh deploy.sh` | ไม่ |
+| อัปทั้งสาม | `sh deploy.sh` | ไม่ |
 | อัปเฉพาะ backend | `sh deploy.sh api` | ไม่ |
-| อัปเฉพาะ frontend | `sh deploy.sh web` | ไม่ |
+| อัปเว็บสาธารณะ | `sh deploy.sh web` | ไม่ |
+| อัป CMS admin | `sh deploy.sh web-admin` | ไม่ |
 | รัน migration | `sh migrate.sh` | ใช่ (schema เท่านั้น ไม่ลบข้อมูล) |
 
 `deploy.sh` ใช้ `up -d --no-deps` ซึ่งเป็นตัวการันตีว่า container `db` และ `rustfs`
@@ -196,8 +203,9 @@ cd D:\journey\journey-api\deploy
 
 ```bash
 docker compose ps                    # สถานะ + health
-docker compose logs -f api           # log สด (web / db ก็ได้)
+docker compose logs -f api           # log สด (web / web-admin / db ก็ได้)
 docker compose logs --tail 200 web
+docker compose logs --tail 200 web-admin
 docker compose restart api           # รีสตาร์ทเฉย ๆ ไม่ build ใหม่
 docker stats --no-stream             # ดู RAM/CPU ที่ใช้จริง
 docker compose exec db psql -U journey -d journey   # เข้า psql
@@ -229,8 +237,9 @@ docker run --rm -v journey_rustfs:/data -v ~:/backup alpine tar -czf /backup/rus
 # ที่เครื่อง dev (ต้องมี Docker Desktop)
 cd D:\journey
 docker build -t journey-api:latest ./journey-api
-docker build -t journey-web:latest ./jourey-web-admin
-docker save journey-api:latest journey-web:latest -o journey-images.tar
+docker build -t journey-web:latest ./journey-web
+docker build -t journey-web-admin:latest ./jourey-web-admin
+docker save journey-api:latest journey-web:latest journey-web-admin:latest -o journey-images.tar
 scp journey-images.tar root@<IP>:/tmp/
 ```
 
@@ -239,8 +248,9 @@ scp journey-images.tar root@<IP>:/tmp/
 docker load -i /tmp/journey-images.tar && rm /tmp/journey-images.tar
 ```
 
-แล้วแก้ `docker-compose.yml` เปลี่ยน `build:` เป็น `image: journey-api:latest` และ
-`image: journey-web:latest` จากนั้น `docker compose up -d` โดยไม่ต้องมีซอร์สบนเซิร์ฟเวอร์เลย
+แล้วแก้ `docker-compose.yml` เปลี่ยน `build:` เป็น `image: journey-api:latest` /
+`image: journey-web:latest` / `image: journey-web-admin:latest` จากนั้น
+`docker compose up -d` โดยไม่ต้องมีซอร์สบนเซิร์ฟเวอร์เลย
 
 ไฟล์จะใหญ่ราว 1-2 GB ต่อรอบ และถ้าเซิร์ฟเวอร์เป็น ARM64 แต่เครื่อง dev เป็น x86
 ต้อง build ด้วย `docker build --platform linux/arm64 ...` ไม่งั้น image รันไม่ได้

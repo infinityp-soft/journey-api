@@ -2,6 +2,7 @@
 #
 #   .\upload.ps1 -Server ubuntu@203.0.113.10
 #   .\upload.ps1 -Server ubuntu@203.0.113.10 -Target web
+#   .\upload.ps1 -Server ubuntu@203.0.113.10 -Target web-admin
 #
 # Then on the server:  cd /opt/journey/deploy ; sh deploy.sh
 #
@@ -13,7 +14,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Server,
 
-    [ValidateSet("api", "web", "all")]
+    [ValidateSet("api", "web", "web-admin", "all")]
     [string]$Target = "all",
 
     [string]$RemotePath = "/opt/journey"
@@ -24,10 +25,12 @@ $ErrorActionPreference = "Stop"
 # deploy/ lives inside journey-api, so two levels up holds both repos
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ApiDir = "journey-api"
-$WebDir = "jourey-web-admin"
+$SiteDir = "journey-web"
+$AdminDir = "jourey-web-admin"
 
 $ApiTar = Join-Path $env:TEMP "journey-api.tar.gz"
-$WebTar = Join-Path $env:TEMP "jourey-web-admin.tar.gz"
+$SiteTar = Join-Path $env:TEMP "journey-web.tar.gz"
+$AdminTar = Join-Path $env:TEMP "jourey-web-admin.tar.gz"
 
 Push-Location $Root
 try {
@@ -41,10 +44,17 @@ try {
     }
 
     if ($Target -eq "web" -or $Target -eq "all") {
-        Write-Host "==> packing $WebDir" -ForegroundColor Cyan
-        tar -czf $WebTar --exclude="$WebDir/node_modules" --exclude="$WebDir/.next" --exclude="$WebDir/.git" --exclude="$WebDir/storybook-static" --exclude="$WebDir/test-results" $WebDir
-        if ($LASTEXITCODE -ne 0) { throw "tar failed for $WebDir" }
-        $uploads += $WebTar
+        Write-Host "==> packing $SiteDir" -ForegroundColor Cyan
+        tar -czf $SiteTar --exclude="$SiteDir/node_modules" --exclude="$SiteDir/.next" --exclude="$SiteDir/.git" $SiteDir
+        if ($LASTEXITCODE -ne 0) { throw "tar failed for $SiteDir" }
+        $uploads += $SiteTar
+    }
+
+    if ($Target -eq "web-admin" -or $Target -eq "all") {
+        Write-Host "==> packing $AdminDir" -ForegroundColor Cyan
+        tar -czf $AdminTar --exclude="$AdminDir/node_modules" --exclude="$AdminDir/.next" --exclude="$AdminDir/.git" --exclude="$AdminDir/storybook-static" --exclude="$AdminDir/test-results" $AdminDir
+        if ($LASTEXITCODE -ne 0) { throw "tar failed for $AdminDir" }
+        $uploads += $AdminTar
     }
 
     Write-Host "==> uploading to $Server" -ForegroundColor Cyan
@@ -59,7 +69,8 @@ try {
         "mkdir -p '$RemotePath'"
         "cd '$RemotePath'"
         "if [ -f /tmp/journey-api.tar.gz ]; then rm -rf '$ApiDir'; tar -xzf /tmp/journey-api.tar.gz; rm -f /tmp/journey-api.tar.gz; fi"
-        "if [ -f /tmp/jourey-web-admin.tar.gz ]; then rm -rf '$WebDir'; tar -xzf /tmp/jourey-web-admin.tar.gz; rm -f /tmp/jourey-web-admin.tar.gz; fi"
+        "if [ -f /tmp/journey-web.tar.gz ]; then rm -rf '$SiteDir'; tar -xzf /tmp/journey-web.tar.gz; rm -f /tmp/journey-web.tar.gz; fi"
+        "if [ -f /tmp/jourey-web-admin.tar.gz ]; then rm -rf '$AdminDir'; tar -xzf /tmp/jourey-web-admin.tar.gz; rm -f /tmp/jourey-web-admin.tar.gz; fi"
         "if [ -d '$ApiDir/deploy' ]; then mkdir -p deploy; cp -r '$ApiDir/deploy/.' deploy/; fi"
         'echo extracted:'
         'ls -1'
@@ -76,5 +87,5 @@ try {
 }
 finally {
     Pop-Location
-    Remove-Item $ApiTar, $WebTar -ErrorAction SilentlyContinue
+    Remove-Item $ApiTar, $SiteTar, $AdminTar -ErrorAction SilentlyContinue
 }

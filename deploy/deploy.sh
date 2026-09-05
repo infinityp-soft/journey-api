@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Build ใหม่แล้วสลับ container — ใช้: sh deploy.sh [api|web|all]  (ค่าเริ่มต้น all)
+# Build ใหม่แล้วสลับ container — ใช้: sh deploy.sh [api|web|web-admin|all]
 # --no-deps ทำให้ db / rustfs และ volume ข้อมูลไม่ถูกแตะ
 set -eu
 cd "$(dirname "$0")"
@@ -22,23 +22,27 @@ case "$TARGET" in
     SERVICES="api"
     ;;
   web)
-    pull_if_git ../jourey-web-admin
+    pull_if_git ../journey-web
     SERVICES="web"
+    ;;
+  web-admin)
+    pull_if_git ../jourey-web-admin
+    SERVICES="web-admin"
     ;;
   all)
     pull_if_git ../journey-api
+    pull_if_git ../journey-web
     pull_if_git ../jourey-web-admin
-    SERVICES="api web"
+    SERVICES="api web web-admin"
     ;;
   *)
-    echo "usage: sh deploy.sh [api|web|all]"
+    echo "usage: sh deploy.sh [api|web|web-admin|all]"
     exit 1
     ;;
 esac
 
 echo "==> building: $SERVICES"
 docker compose build $SERVICES
-# ลบโฟลเดอร์ nginx ค้างจาก compose รุ่นเก่า แล้วปิด container ที่ไม่มีในไฟล์แล้ว
 rm -rf ./nginx
 docker compose up -d --no-deps --remove-orphans $SERVICES
 

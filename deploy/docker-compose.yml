@@ -1,13 +1,14 @@
-# บนเซิร์ฟเวอร์ต้องมี: docker-compose.yml + .env + ซอร์สทั้งสอง repo
+# บนเซิร์ฟเวอร์ต้องมี: docker-compose.yml + .env + ซอร์สสาม repo
 #
 #   /opt/journey/
 #     journey-api/
+#     journey-web/
 #     jourey-web-admin/
 #     deploy/
 #
 #   docker compose up -d --build
 #
-# ไม่ใช้ nginx — เปิดพอร์ต web ออกเครื่อง แล้ว Next.js rewrite /api /media ไป api
+# ไม่ใช้ nginx — เปิดพอร์ต Next ออกเครื่อง แล้ว rewrite /api /media ไป api
 
 name: journey
 
@@ -58,10 +59,46 @@ services:
         condition: service_healthy
       rustfs:
         condition: service_started
-    # พอร์ต 3000 ไม่เปิดออกเครื่อง — เข้าผ่าน Next rewrite ที่ web
+    # พอร์ต 3000 ไม่เปิดออกเครื่อง — เข้าผ่าน Next rewrite ที่ web / web-admin
     # ไม่รัน migrate ตอนสตาร์ท — ใช้ sh migrate.sh แยก
 
   web:
+    container_name: journey-web-1
+    build:
+      context: ../journey-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_MEDIA_URL: /media
+        NEXT_PUBLIC_API_KEY: ${NEXT_PUBLIC_API_KEY:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+        INTERNAL_API_URL: http://api:3000/api
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+      INTERNAL_API_URL: http://api:3000/api
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('net').connect(3001,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      api:
+        condition: service_started
+
+  web-admin:
+    container_name: journey-web-admin-1
     build:
       context: ../jourey-web-admin
       dockerfile: Dockerfile
@@ -73,12 +110,11 @@ services:
         SERVER_ACTION_ORIGINS: ${SERVER_ACTION_ORIGINS:-}
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-8080}:3002"
+      - "${ADMIN_PORT:-8081}:3002"
     environment:
       NODE_ENV: production
       PORT: 3002
       HOSTNAME: 0.0.0.0
-      # server component / middleware ยิงตรงผ่าน docker network
       INTERNAL_API_URL: http://api:3000/api
     healthcheck:
       test:
