@@ -23,6 +23,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { DestinationQueryDto } from './dto/destination-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
@@ -36,11 +37,20 @@ import { DestinationResponseDto } from './dto/destination-response.dto';
 @ApiTags('destinations')
 @ApiBearerAuth('access-token')
 @Controller('destinations')
-@UseGuards(PoliciesGuard)
 export class DestinationsController {
   constructor(private readonly service: DestinationsService) {}
 
+  /** Published destinations for the marketing website. */
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'List published destinations (public)' })
+  @ApiOkResponse({ type: [DestinationResponseDto] })
+  findPublic() {
+    return this.service.findPublic();
+  }
+
   @Post()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Destination'))
   @ApiOperation({ summary: 'Create a destination' })
   @ApiCreatedResponse({ type: DestinationResponseDto })
@@ -49,6 +59,7 @@ export class DestinationsController {
   }
 
   @Get()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Destination'))
   @ApiOperation({ summary: 'List destinations' })
   @ApiPaginatedOkResponse(DestinationResponseDto)
@@ -57,6 +68,7 @@ export class DestinationsController {
   }
 
   @Get(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Destination'))
   @ApiOperation({ summary: 'Get a destination by ID' })
   @ApiOkResponse({ type: DestinationResponseDto })
@@ -66,6 +78,7 @@ export class DestinationsController {
 
   @Patch('reorder')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Destination'))
   @ApiOperation({ summary: 'Reorder destinations' })
   @ApiNoContentResponse()
@@ -74,6 +87,7 @@ export class DestinationsController {
   }
 
   @Patch(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Destination'))
   @ApiOperation({ summary: 'Update a destination' })
   @ApiOkResponse({ type: DestinationResponseDto })
@@ -86,6 +100,7 @@ export class DestinationsController {
 
   @Delete(':id')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'Destination'))
   @ApiOperation({ summary: 'Delete a destination' })
   @ApiNoContentResponse()
