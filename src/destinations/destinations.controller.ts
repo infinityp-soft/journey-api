@@ -49,6 +49,15 @@ export class DestinationsController {
     return this.service.findPublic();
   }
 
+  /** Single published destination for the marketing website. */
+  @Public()
+  @Get('public/:id')
+  @ApiOperation({ summary: 'Get a published destination by ID (public)' })
+  @ApiOkResponse({ type: DestinationResponseDto })
+  findPublicOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findPublicOne(id);
+  }
+
   @Post()
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Destination'))

@@ -65,6 +65,24 @@ export class EventsController {
     return this.service.findAll(query);
   }
 
+  /** Scheduled/active events for the marketing website. */
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'List scheduled/active events (public)' })
+  @ApiOkResponse({ type: [EventListItemResponseDto] })
+  findPublic() {
+    return this.service.findPublic();
+  }
+
+  /** Single scheduled/active event for the marketing website. */
+  @Public()
+  @Get('public/:id')
+  @ApiOperation({ summary: 'Get a scheduled/active event by ID (public)' })
+  @ApiOkResponse({ type: EventDetailResponseDto })
+  findPublicOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findPublicOne(id);
+  }
+
   @Get(':id')
   @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Event'))
