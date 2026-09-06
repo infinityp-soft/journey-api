@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { SimpleStatus } from '../common/enums';
 import { buildWhere } from '../common/crud/build-where';
 import { PrismaService } from '../prisma/prisma.service';
 import { VisaQueryDto } from './dto/visa-query.dto';
@@ -30,6 +31,15 @@ export class VisaService {
           : undefined,
       },
       include: VISA_INCLUDE,
+    });
+  }
+
+  /** Active visa services for the marketing website. */
+  findPublic() {
+    return this.prisma.visaService.findMany({
+      where: { status: SimpleStatus.active },
+      include: VISA_INCLUDE,
+      orderBy: { sortOrder: 'asc' },
     });
   }
 
