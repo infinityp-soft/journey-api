@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/User/AppData/Local/Temp/**)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(taskkill //F //IM pnpm.exe)",
+      "Bash(taskkill //F //IM node.exe //FI \"WINDOWTITLE eq pnpm*\")",
+      "Bash(pnpm rebuild *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/api/about-us/public --max-time 5)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\" //V)",
+      "Bash(curl -s http://localhost:3000/api/about-us/public --max-time 5)",
+      "Bash(curl -s -X PATCH http://localhost:3000/api/about-us -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json; charset=utf-8' --data-binary @C:/Users/User/AppData/Local/Temp/about-us-payload.json)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3901/th --max-time 8)",
+      "Bash(curl -s http://localhost:3901/th --max-time 8 -o \"C:/Users/User/AppData/Local/Temp/home-live.html\")",
+      "Bash(taskkill //PID 34312 //F)",
+      "Bash(taskkill //PID 35976 //F)",
+      "Bash(curl -s http://localhost:3003/api/about-us/public --max-time 8)",
+      "Bash(tasklist //FI \"PID eq 36572\")",
+      "Bash(curl -s http://localhost:3000/th --max-time 8 -o \"C:/Users/User/AppData/Local/Temp/home-check.html\" -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(curl -s http://localhost:3000/th --max-time 8 -o \"C:/Users/User/AppData/Local/Temp/home-check2.html\" -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(curl -s -D - http://localhost:3000/th -H \"RSC: 1\" --max-time 8 -o \"C:/Users/User/AppData/Local/Temp/rsc-th.txt\")",
+      "Bash(grep -o \"ที่ปรึกษาที่ได้รับการรับรอง\" \"C:/Users/User/AppData/Local/Temp/rsc-th.txt\" | wc -l *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\User\\AppData\\Local\\Temp"
+    ]
+  }
+}
