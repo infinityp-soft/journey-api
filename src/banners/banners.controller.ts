@@ -23,6 +23,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { BannerQueryDto } from './dto/banner-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
@@ -33,11 +34,11 @@ import { BannerResponseDto } from './dto/banner-response.dto';
 @ApiTags('banners')
 @ApiBearerAuth('access-token')
 @Controller('banners')
-@UseGuards(PoliciesGuard)
 export class BannersController {
   constructor(private readonly service: BannersService) {}
 
   @Post()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Banner'))
   @ApiOperation({ summary: 'Create a banner' })
   @ApiCreatedResponse({ type: BannerResponseDto })
@@ -46,6 +47,7 @@ export class BannersController {
   }
 
   @Get()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Banner'))
   @ApiOperation({ summary: 'List banners' })
   @ApiPaginatedOkResponse(BannerResponseDto)
@@ -53,7 +55,16 @@ export class BannersController {
     return this.service.findAll(query);
   }
 
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'List active banners for the marketing website' })
+  @ApiOkResponse({ type: [BannerResponseDto] })
+  findPublic() {
+    return this.service.findPublic();
+  }
+
   @Get(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Banner'))
   @ApiOperation({ summary: 'Get a banner by ID' })
   @ApiOkResponse({ type: BannerResponseDto })
@@ -62,6 +73,7 @@ export class BannersController {
   }
 
   @Patch('reorder')
+  @UseGuards(PoliciesGuard)
   @HttpCode(204)
   @CheckPolicies(can(Action.Update, 'Banner'))
   @ApiOperation({ summary: 'Reorder banners' })
@@ -71,6 +83,7 @@ export class BannersController {
   }
 
   @Patch(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Banner'))
   @ApiOperation({ summary: 'Update a banner' })
   @ApiOkResponse({ type: BannerResponseDto })
@@ -82,6 +95,7 @@ export class BannersController {
   }
 
   @Delete(':id')
+  @UseGuards(PoliciesGuard)
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'Banner'))
   @ApiOperation({ summary: 'Delete a banner' })
