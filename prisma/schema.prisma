@@ -129,6 +129,7 @@ model MediaAsset {
   eventCovers          Event[]
   siteContactCovers    SiteSettings[]      @relation("SiteContactCover")
   siteLogos            SiteSettings[]      @relation("SiteLogo")
+  socialLinkIcons      SocialLink[]
 
   @@map("media_assets")
 }
@@ -590,6 +591,8 @@ model SocialLink {
   id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   platform  SocialPlatform
   url       String
+  iconId    String?        @map("icon_id") @db.Uuid
+  icon      MediaAsset?    @relation(fields: [iconId], references: [id], onDelete: SetNull)
   isActive  Boolean        @default(true) @map("is_active")
   sortOrder Int            @default(0) @map("sort_order")
   createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
