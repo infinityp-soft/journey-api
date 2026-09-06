@@ -13,4 +13,13 @@ export class StaffService extends BasePrismaService {
       defaultOrder: { sortOrder: 'asc' },
     });
   }
+
+  /** Visible staff members for the marketing website, unpaginated. */
+  findPublic() {
+    return this.model.findMany({
+      where: { isVisible: true },
+      include: this.options.include,
+      orderBy: this.options.defaultOrder,
+    });
+  }
 }

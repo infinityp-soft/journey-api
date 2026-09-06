@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { EventStatus } from '../common/enums';
 import { buildWhere } from '../common/crud/build-where';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -70,6 +71,31 @@ export class EventsService {
       this.prisma.event.count({ where }),
     ]);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  /** Scheduled/active events for the marketing website, soonest first. */
+  findPublic() {
+    return this.prisma.event.findMany({
+      where: { status: { in: [EventStatus.scheduled, EventStatus.active] } },
+      include: {
+        coverImage: true,
+        _count: { select: { registrations: true } },
+      },
+      orderBy: { eventStartAt: 'asc' },
+    });
+  }
+
+  /** Single scheduled/active event for the marketing website. */
+  async findPublicOne(id: string) {
+    const event = await this.prisma.event.findFirst({
+      where: { id, status: { in: [EventStatus.scheduled, EventStatus.active] } },
+      include: {
+        ...EVENT_INCLUDE,
+        _count: { select: { registrations: true } },
+      },
+    });
+    if (!event) throw new NotFoundException('Event not found');
+    return event;
   }
 
   async findOne(id: string) {

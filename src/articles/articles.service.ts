@@ -84,6 +84,32 @@ export class ArticlesService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  /** Published/visible articles for the marketing website, newest first. */
+  findPublic() {
+    return this.prisma.article.findMany({
+      where: { status: PublishStatus.published, isVisible: true },
+      include: ARTICLE_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+  }
+
+  /** Single published/visible article by slug for the marketing website. */
+  async findPublicBySlug(slug: string) {
+    const article = await this.prisma.article.findUnique({
+      where: { slug },
+      include: ARTICLE_INCLUDE,
+    });
+    if (
+      !article ||
+      article.status !== PublishStatus.published ||
+      !article.isVisible
+    ) {
+      throw new NotFoundException('Article not found');
+    }
+    return article;
+  }
+
   async findOne(id: string) {
     const article = await this.prisma.article.findUnique({
       where: { id },

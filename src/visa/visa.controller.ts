@@ -23,6 +23,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { VisaQueryDto } from './dto/visa-query.dto';
 import { CreateVisaServiceDto, UpdateVisaServiceDto } from './dto/visa.dto';
@@ -32,11 +33,19 @@ import { VisaService } from './visa.service';
 @ApiTags('visa')
 @ApiBearerAuth('access-token')
 @Controller('visa-services')
-@UseGuards(PoliciesGuard)
 export class VisaController {
   constructor(private readonly service: VisaService) {}
 
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'List active visa services for the marketing website' })
+  @ApiOkResponse({ type: [VisaServiceResponseDto] })
+  findPublic() {
+    return this.service.findPublic();
+  }
+
   @Post()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'VisaService'))
   @ApiOperation({ summary: 'Create a visa service' })
   @ApiCreatedResponse({ type: VisaServiceResponseDto })
@@ -45,6 +54,7 @@ export class VisaController {
   }
 
   @Get()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'VisaService'))
   @ApiOperation({ summary: 'List visa services' })
   @ApiPaginatedOkResponse(VisaServiceResponseDto)
@@ -53,6 +63,7 @@ export class VisaController {
   }
 
   @Get(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'VisaService'))
   @ApiOperation({ summary: 'Get a visa service by ID' })
   @ApiOkResponse({ type: VisaServiceResponseDto })
@@ -61,6 +72,7 @@ export class VisaController {
   }
 
   @Patch(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'VisaService'))
   @ApiOperation({ summary: 'Update a visa service' })
   @ApiOkResponse({ type: VisaServiceResponseDto })
@@ -72,6 +84,7 @@ export class VisaController {
   }
 
   @Delete(':id')
+  @UseGuards(PoliciesGuard)
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'VisaService'))
   @ApiOperation({ summary: 'Delete a visa service' })

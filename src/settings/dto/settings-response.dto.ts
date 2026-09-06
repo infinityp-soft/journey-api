@@ -127,6 +127,12 @@ export class SocialLinkResponseDto {
   @ApiProperty()
   url: string;
 
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  iconId: string | null;
+
+  @ApiPropertyOptional({ type: MediaAssetResponseDto, nullable: true })
+  icon?: MediaAssetResponseDto | null;
+
   @ApiProperty()
   isActive: boolean;
 

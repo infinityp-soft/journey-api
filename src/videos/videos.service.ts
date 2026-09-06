@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PublishStatus } from '../common/enums';
 import { BasePrismaService } from '../common/crud/base-prisma.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateVideoPageDto } from './dto/video.dto';
@@ -12,6 +13,15 @@ export class VideosService extends BasePrismaService {
       filterable: ['status'],
       dateField: 'createdAt',
       defaultOrder: { sortOrder: 'asc' },
+    });
+  }
+
+  /** Published videos for the marketing website's video gallery. */
+  findPublic() {
+    return this.prisma.video.findMany({
+      where: { status: PublishStatus.published },
+      include: { thumbnail: true },
+      orderBy: { sortOrder: 'asc' },
     });
   }
 

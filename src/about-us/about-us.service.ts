@@ -32,6 +32,16 @@ export class AboutUsService {
     });
   }
 
+  async getPublicProfile() {
+    const about = await this.getProfile();
+    return {
+      ...about,
+      highlights: about.highlights
+        .filter((highlight) => highlight.isEnabled)
+        .slice(0, MAX_HIGHLIGHTS),
+    };
+  }
+
   async updateProfile(dto: UpdateAboutUsDto) {
     const about = await this.getProfile();
     return this.prisma.aboutUs.update({

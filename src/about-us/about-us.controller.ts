@@ -22,6 +22,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { AboutUsService } from './about-us.service';
 import {
   CreateHighlightDto,
@@ -36,11 +37,20 @@ import {
 @ApiTags('about-us')
 @ApiBearerAuth('access-token')
 @Controller('about-us')
-@UseGuards(PoliciesGuard)
 export class AboutUsController {
   constructor(private readonly service: AboutUsService) {}
 
+  /** Public company profile + enabled highlights for the marketing website. */
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'Get about-us public profile (public)' })
+  @ApiOkResponse({ type: AboutUsResponseDto })
+  getPublicProfile() {
+    return this.service.getPublicProfile();
+  }
+
   @Get()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'AboutUs'))
   @ApiOperation({ summary: 'Get about-us profile' })
   @ApiOkResponse({ type: AboutUsResponseDto })
@@ -49,6 +59,7 @@ export class AboutUsController {
   }
 
   @Patch()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'AboutUs'))
   @ApiOperation({ summary: 'Update about-us profile' })
   @ApiOkResponse({ type: AboutUsResponseDto })
@@ -57,6 +68,7 @@ export class AboutUsController {
   }
 
   @Post('highlights')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Highlight'))
   @ApiOperation({ summary: 'Add an about-us highlight' })
   @ApiCreatedResponse({ type: AboutHighlightResponseDto })
@@ -65,6 +77,7 @@ export class AboutUsController {
   }
 
   @Patch('highlights/:id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Highlight'))
   @ApiOperation({ summary: 'Update an about-us highlight' })
   @ApiOkResponse({ type: AboutHighlightResponseDto })
@@ -77,6 +90,7 @@ export class AboutUsController {
 
   @Delete('highlights/:id')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'Highlight'))
   @ApiOperation({ summary: 'Delete an about-us highlight' })
   @ApiNoContentResponse()

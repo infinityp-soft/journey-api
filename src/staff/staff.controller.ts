@@ -23,6 +23,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
 import { StaffQueryDto } from './dto/staff-query.dto';
 import { ReorderDto } from '../common/dto/reorder.dto';
@@ -33,11 +34,20 @@ import { StaffService } from './staff.service';
 @ApiTags('staff')
 @ApiBearerAuth('access-token')
 @Controller('staff')
-@UseGuards(PoliciesGuard)
 export class StaffController {
   constructor(private readonly service: StaffService) {}
 
+  /** Visible staff members for the marketing website (e.g. event registration form). */
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'List visible staff members (public)' })
+  @ApiOkResponse({ type: [StaffMemberResponseDto] })
+  findPublic() {
+    return this.service.findPublic();
+  }
+
   @Post()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Staff'))
   @ApiOperation({ summary: 'Create a staff member' })
   @ApiCreatedResponse({ type: StaffMemberResponseDto })
@@ -46,6 +56,7 @@ export class StaffController {
   }
 
   @Get()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Staff'))
   @ApiOperation({ summary: 'List staff members' })
   @ApiPaginatedOkResponse(StaffMemberResponseDto)
@@ -54,6 +65,7 @@ export class StaffController {
   }
 
   @Get(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Staff'))
   @ApiOperation({ summary: 'Get a staff member by ID' })
   @ApiOkResponse({ type: StaffMemberResponseDto })
@@ -63,6 +75,7 @@ export class StaffController {
 
   @Patch('reorder')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Staff'))
   @ApiOperation({ summary: 'Reorder staff members' })
   @ApiNoContentResponse()
@@ -71,6 +84,7 @@ export class StaffController {
   }
 
   @Patch(':id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Staff'))
   @ApiOperation({ summary: 'Update a staff member' })
   @ApiOkResponse({ type: StaffMemberResponseDto })
@@ -80,6 +94,7 @@ export class StaffController {
 
   @Delete(':id')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'Staff'))
   @ApiOperation({ summary: 'Delete a staff member' })
   @ApiNoContentResponse()

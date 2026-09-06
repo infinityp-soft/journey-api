@@ -172,6 +172,11 @@ export class CreateSocialLinkDto {
   @IsString()
   url: string;
 
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  iconId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

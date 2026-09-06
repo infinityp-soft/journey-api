@@ -23,6 +23,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { ArticleQueryDto } from './dto/article-query.dto';
 import { ApiPaginatedOkResponse } from '../common/dto/paginated-response.dto';
@@ -43,15 +44,33 @@ import {
 @ApiTags('articles')
 @ApiBearerAuth('access-token')
 @Controller()
-@UseGuards(PoliciesGuard)
 export class ArticlesController {
   constructor(
     private readonly articles: ArticlesService,
     private readonly categories: ArticleCategoriesService,
   ) {}
 
+  /** Published/visible articles for the marketing website. */
+  @Public()
+  @Get('articles/public')
+  @ApiOperation({ summary: 'List published articles (public)' })
+  @ApiOkResponse({ type: [ArticleResponseDto] })
+  findPublic() {
+    return this.articles.findPublic();
+  }
+
+  /** Single published/visible article by slug for the marketing website. */
+  @Public()
+  @Get('articles/public/:slug')
+  @ApiOperation({ summary: 'Get a published article by slug (public)' })
+  @ApiOkResponse({ type: ArticleResponseDto })
+  findPublicBySlug(@Param('slug') slug: string) {
+    return this.articles.findPublicBySlug(slug);
+  }
+
   // --- Categories (Manage Categories modal) ---
   @Post('article-categories')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'ArticleCategory'))
   @ApiOperation({ summary: 'Create an article category' })
   @ApiCreatedResponse({ type: ArticleCategoryResponseDto })
@@ -60,6 +79,7 @@ export class ArticlesController {
   }
 
   @Get('article-categories')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'ArticleCategory'))
   @ApiOperation({ summary: 'List article categories' })
   @ApiPaginatedOkResponse(ArticleCategoryResponseDto)
@@ -69,6 +89,7 @@ export class ArticlesController {
 
   @Patch('article-categories/reorder')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'ArticleCategory'))
   @ApiOperation({ summary: 'Reorder article categories' })
   @ApiNoContentResponse()
@@ -77,6 +98,7 @@ export class ArticlesController {
   }
 
   @Patch('article-categories/:id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'ArticleCategory'))
   @ApiOperation({ summary: 'Update an article category' })
   @ApiOkResponse({ type: ArticleCategoryResponseDto })
@@ -89,6 +111,7 @@ export class ArticlesController {
 
   @Delete('article-categories/:id')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'ArticleCategory'))
   @ApiOperation({ summary: 'Delete an article category' })
   @ApiNoContentResponse()
@@ -98,6 +121,7 @@ export class ArticlesController {
 
   // --- Articles ---
   @Post('articles')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'Article'))
   @ApiOperation({ summary: 'Create an article' })
   @ApiCreatedResponse({ type: ArticleResponseDto })
@@ -106,6 +130,7 @@ export class ArticlesController {
   }
 
   @Get('articles')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Article'))
   @ApiOperation({ summary: 'List articles' })
   @ApiPaginatedOkResponse(ArticleResponseDto)
@@ -114,6 +139,7 @@ export class ArticlesController {
   }
 
   @Get('articles/:id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'Article'))
   @ApiOperation({ summary: 'Get an article by ID' })
   @ApiOkResponse({ type: ArticleResponseDto })
@@ -122,6 +148,7 @@ export class ArticlesController {
   }
 
   @Patch('articles/:id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'Article'))
   @ApiOperation({ summary: 'Update an article' })
   @ApiOkResponse({ type: ArticleResponseDto })
@@ -134,6 +161,7 @@ export class ArticlesController {
 
   @Delete('articles/:id')
   @HttpCode(204)
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Delete, 'Article'))
   @ApiOperation({ summary: 'Delete an article' })
   @ApiNoContentResponse()
