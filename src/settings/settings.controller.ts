@@ -22,6 +22,7 @@ import { can } from '../auth/casl/ability.decorator';
 import { Action } from '../auth/casl/action.enum';
 import { CheckPolicies } from '../auth/casl/policy-handler';
 import { PoliciesGuard } from '../auth/casl/policies.guard';
+import { Public } from '../common/decorators/public.decorator';
 import {
   CreatePreFooterHighlightDto,
   CreateSocialLinkDto,
@@ -39,11 +40,19 @@ import { SettingsService } from './settings.service';
 @ApiTags('settings')
 @ApiBearerAuth('access-token')
 @Controller('settings')
-@UseGuards(PoliciesGuard)
 export class SettingsController {
   constructor(private readonly service: SettingsService) {}
 
+  @Public()
+  @Get('public')
+  @ApiOperation({ summary: 'Get site settings for the marketing website' })
+  @ApiOkResponse({ type: SiteSettingsResponseDto })
+  getPublic() {
+    return this.service.getSettings();
+  }
+
   @Get()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'SiteSettings'))
   @ApiOperation({ summary: 'Get site settings' })
   @ApiOkResponse({ type: SiteSettingsResponseDto })
@@ -52,6 +61,7 @@ export class SettingsController {
   }
 
   @Patch()
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'SiteSettings'))
   @ApiOperation({ summary: 'Update site settings' })
   @ApiOkResponse({ type: SiteSettingsResponseDto })
@@ -60,6 +70,7 @@ export class SettingsController {
   }
 
   @Post('pre-footer-highlights')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'PreFooterHighlight'))
   @ApiOperation({ summary: 'Add a pre-footer CTA checklist row (max 3)' })
   @ApiCreatedResponse({ type: PreFooterHighlightResponseDto })
@@ -68,6 +79,7 @@ export class SettingsController {
   }
 
   @Patch('pre-footer-highlights/:id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'PreFooterHighlight'))
   @ApiOperation({ summary: 'Update a pre-footer CTA checklist row' })
   @ApiOkResponse({ type: PreFooterHighlightResponseDto })
@@ -79,6 +91,7 @@ export class SettingsController {
   }
 
   @Delete('pre-footer-highlights/:id')
+  @UseGuards(PoliciesGuard)
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'PreFooterHighlight'))
   @ApiOperation({ summary: 'Delete a pre-footer CTA checklist row' })
@@ -87,7 +100,16 @@ export class SettingsController {
     return this.service.removePreFooterHighlight(id);
   }
 
+  @Public()
+  @Get('social-links/public')
+  @ApiOperation({ summary: 'List active social links for the marketing website' })
+  @ApiOkResponse({ type: [SocialLinkResponseDto] })
+  listSocialPublic() {
+    return this.service.findPublicSocialLinks();
+  }
+
   @Get('social-links')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Read, 'SocialLink'))
   @ApiOperation({ summary: 'List social links' })
   @ApiOkResponse({ type: [SocialLinkResponseDto] })
@@ -96,6 +118,7 @@ export class SettingsController {
   }
 
   @Post('social-links')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Create, 'SocialLink'))
   @ApiOperation({ summary: 'Create a social link' })
   @ApiCreatedResponse({ type: SocialLinkResponseDto })
@@ -104,6 +127,7 @@ export class SettingsController {
   }
 
   @Patch('social-links/:id')
+  @UseGuards(PoliciesGuard)
   @CheckPolicies(can(Action.Update, 'SocialLink'))
   @ApiOperation({ summary: 'Update a social link' })
   @ApiOkResponse({ type: SocialLinkResponseDto })
@@ -115,6 +139,7 @@ export class SettingsController {
   }
 
   @Delete('social-links/:id')
+  @UseGuards(PoliciesGuard)
   @HttpCode(204)
   @CheckPolicies(can(Action.Delete, 'SocialLink'))
   @ApiOperation({ summary: 'Delete a social link' })

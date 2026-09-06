@@ -95,17 +95,33 @@ export class SettingsService {
 
   // --- Social links ---
   listSocialLinks() {
-    return this.prisma.socialLink.findMany({ orderBy: { sortOrder: 'asc' } });
+    return this.prisma.socialLink.findMany({
+      include: { icon: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  /** Active social links for the marketing website's footer. */
+  findPublicSocialLinks() {
+    return this.prisma.socialLink.findMany({
+      where: { isActive: true },
+      include: { icon: true },
+      orderBy: { sortOrder: 'asc' },
+    });
   }
 
   createSocialLink(dto: CreateSocialLinkDto) {
-    return this.prisma.socialLink.create({ data: dto });
+    return this.prisma.socialLink.create({ data: dto, include: { icon: true } });
   }
 
   async updateSocialLink(id: string, dto: UpdateSocialLinkDto) {
     const link = await this.prisma.socialLink.findUnique({ where: { id } });
     if (!link) throw new NotFoundException('Social link not found');
-    return this.prisma.socialLink.update({ where: { id }, data: dto });
+    return this.prisma.socialLink.update({
+      where: { id },
+      data: dto,
+      include: { icon: true },
+    });
   }
 
   async removeSocialLink(id: string) {
