@@ -39,6 +39,8 @@ URL ที่ฝังลง frontend bundle เป็น **relative path** (`/a
 | `.env.example` | เทมเพลตของ `.env` (`.env` ตัวจริงไม่อยู่ใน git) |
 | `upload.ps1` | ส่งซอร์สจาก Windows ขึ้นเซิร์ฟเวอร์ (รันที่เครื่อง dev) |
 | `deploy.sh` | build + สลับ container โดยไม่แตะฐานข้อมูล |
+| `backup.sh` | สำรอง Postgres + ไฟล์ rustfs |
+| `restore.sh` | กู้คืนจากโฟลเดอร์ที่ `backup.sh` สร้าง |
 | `migrate.sh` | `prisma migrate deploy` |
 | `seed.sh` | สร้าง super admin ครั้งแรก |
 | `native/` | ทางเลือกติดตั้งแบบ systemd ไม่ใช้ Docker (ไม่ได้ใช้กับคู่มือนี้) |
@@ -211,21 +213,68 @@ docker stats --no-stream             # ดู RAM/CPU ที่ใช้จร�
 docker compose exec db psql -U journey -d journey   # เข้า psql
 ```
 
-### สำรอง / กู้คืนฐานข้อมูล
+Postgres ฟังแค่ `127.0.0.1:5432` บนเซิร์ฟเวอร์ ไม่เปิดออกเน็ต
+
+ต่อจากเครื่อง dev (DBeaver / TablePlus) ให้เปิด SSH tunnel ทิ้งไว้ แล้วชี้ client ไป `127.0.0.1:5432`
 
 ```bash
-# backup
-docker compose exec -T db pg_dump -U journey journey | gzip > ~/journey-$(date +%F).sql.gz
-
-# restore
-gunzip -c ~/journey-2026-08-30.sql.gz | docker compose exec -T db psql -U journey -d journey
+ssh -L 5432:127.0.0.1:5432 root@<IP>
 ```
 
-ไฟล์รูปอยู่ใน Docker volume `journey_rustfs` สำรองด้วย
+ใน DBeaver: Host `127.0.0.1` / Port `5432` / Database กับ user จาก `.env` (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`)
+อย่าใส่ Host เป็น IP สาธารณะ และอย่าเปิด `5432` ใน ufw
+
+### สำรอง / กู้คืนข้อมูล
+
+สำรอง **ฐาน Postgres** กับ **ไฟล์ใน rustfs** คู่กัน รันจาก `/opt/journey/deploy`
+
+```
+/opt/journey/backups/
+  2026-09-08_020000/
+    postgres.sql.gz
+    rustfs.tar.gz
+    manifest.txt
+```
+
+`deploy.sh` ไม่แตะ `db` / `rustfs` — backup คนละเรื่องกับอัปโค้ด
 
 ```bash
-docker run --rm -v journey_rustfs:/data -v ~:/backup alpine tar -czf /backup/rustfs-$(date +%F).tar.gz -C /data .
+sh backup.sh            # ทั้งคู่ (ค่าเริ่มต้น)
+sh backup.sh db         # เฉพาะฐาน
+sh backup.sh media      # เฉพาะไฟล์อัปโหลด
 ```
+
+ไฟล์ไปที่ `/opt/journey/backups/<วันเวลา>/` เก็บไว้ 14 โฟลเดอร์ล่าสุด แล้วลบของเก่า
+เปลี่ยนที่เก็บ / จำนวนด้วย `BACKUP_DIR` และ `KEEP`
+
+```bash
+BACKUP_DIR=/root/journey-backups KEEP=7 sh backup.sh
+```
+
+กู้คืนทับของบนเครื่อง — ต้องพิมพ์ `CONFIRM=YES`
+
+```bash
+CONFIRM=YES sh restore.sh /opt/journey/backups/2026-09-08_020000
+CONFIRM=YES sh restore.sh /opt/journey/backups/2026-09-08_020000 db
+CONFIRM=YES sh restore.sh /opt/journey/backups/2026-09-08_020000 media
+```
+
+อย่า `docker compose down -v` และอย่า `prisma migrate reset` บนโปรดักชัน
+
+สำรองอัตโนมัติทุกวัน 02:00
+
+```bash
+sudo mkdir -p /opt/journey/backups
+sudo crontab -e
+```
+
+เพิ่มบรรทัด
+
+```
+0 2 * * * cd /opt/journey/deploy && sh backup.sh >> /var/log/journey-backup.log 2>&1
+```
+
+ควร copy โฟลเดอร์ backup ออกนอกเครื่องด้วย (`scp` / ดาวน์โหลด) อย่าเก็บแค่บน VPS เครื่องเดียว
 
 ---
 
