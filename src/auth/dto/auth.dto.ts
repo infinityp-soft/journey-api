@@ -30,3 +30,28 @@ export class ChangePasswordDto {
   @MinLength(8)
   newPassword: string;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'admin@example.com' })
+  @IsEmail()
+  email: string;
+}
+
+export class VerifyResetTokenDto {
+  @ApiProperty({ description: 'Raw reset token sent via email' })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ description: 'Raw reset token sent via email' })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiProperty({ minLength: 8, example: 'NewSecret123!' })
+  @IsString()
+  @MinLength(8)
+  newPassword: string;
+}

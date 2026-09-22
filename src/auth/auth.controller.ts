@@ -5,6 +5,7 @@ import {
   HttpCode,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import {
@@ -26,7 +27,13 @@ import {
   LoginResponseDto,
   TokenPairResponseDto,
 } from './dto/auth-response.dto';
-import { LoginDto, RefreshDto } from './dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RefreshDto,
+  ResetPasswordDto,
+  VerifyResetTokenDto,
+} from './dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -85,5 +92,31 @@ export class AuthController {
   @ApiOkResponse({ type: UserResponseDto })
   updateMe(@CurrentUser('id') id: string, @Body() dto: UpdateProfileDto) {
     return this.users.updateProfile(id, dto);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Request password reset link' })
+  @ApiOkResponse({ description: 'Generic success message' })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.auth.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @Get('verify-reset-token')
+  @ApiOperation({ summary: 'Verify if a reset token is valid' })
+  @ApiOkResponse({ description: 'Token validity status' })
+  verifyResetToken(@Query() query: VerifyResetTokenDto) {
+    return this.auth.verifyResetToken(query.token);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reset password using token' })
+  @ApiOkResponse({ description: 'Password reset status' })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto.token, dto.newPassword);
   }
 }

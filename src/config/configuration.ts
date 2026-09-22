@@ -30,6 +30,11 @@ export interface AppConfig {
     maxUploadMb: number;
     rustfs: RustFsConfig;
   };
+  mail: {
+    resendApiKey: string;
+    from: string;
+  };
+  webAdminBaseUrl: string;
 }
 
 export default (): AppConfig => ({
@@ -64,4 +69,11 @@ export default (): AppConfig => ({
       forcePathStyle: process.env.RUSTFS_FORCE_PATH_STYLE !== 'false',
     },
   },
+  mail: {
+    resendApiKey: process.env.RESEND_API_KEY ?? '',
+    from: process.env.MAIL_FROM ?? 'Journey Admin <onboarding@resend.dev>',
+  },
+  webAdminBaseUrl: (
+    process.env.WEB_ADMIN_BASE_URL ?? 'http://localhost:3001'
+  ).replace(/\/+$/, ''),
 });
