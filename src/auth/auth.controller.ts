@@ -100,7 +100,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Request password reset link' })
   @ApiOkResponse({ description: 'Generic success message' })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.auth.forgotPassword(dto.email);
+    return this.auth.forgotPassword(dto.email, dto.locale);
   }
 
   @Public()

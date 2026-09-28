@@ -165,7 +165,10 @@ export class AuthService {
    * Request a password reset link sent to the user's email.
    * Returns a generic message to prevent email enumeration.
    */
-  async forgotPassword(email: string): Promise<{ message: string }> {
+  async forgotPassword(
+    email: string,
+    locale?: string,
+  ): Promise<{ message: string }> {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
@@ -198,10 +201,11 @@ export class AuthService {
       },
     });
 
-    // 4. Construct the reset URL pointing to Web Admin frontend
+    // 4. Construct the reset URL pointing to Web Admin frontend (defaults to 'th')
     const webAdminBaseUrl =
       this.config.get<string>('webAdminBaseUrl') || 'http://localhost:3002';
-    const resetLink = `${webAdminBaseUrl}/en/reset-password?token=${rawToken}`;
+    const targetLocale = locale === 'en' ? 'en' : 'th';
+    const resetLink = `${webAdminBaseUrl}/${targetLocale}/reset-password?token=${rawToken}`;
 
     // 5. Send email via Resend
     try {
