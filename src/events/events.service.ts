@@ -16,6 +16,7 @@ import {
   CreateEventRegistrationDto,
   UpdateEventDto,
 } from './dto/event.dto';
+import { htmlSummary } from '../common/utils/html-summary';
 
 const EVENT_INCLUDE = {
   coverImage: true,
@@ -73,9 +74,13 @@ export class EventsService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  /** Scheduled/active events for the marketing website, soonest first. */
-  findPublic() {
-    return this.prisma.event.findMany({
+  /**
+   * Scheduled/active events for the marketing website, soonest first.
+   * Cards only need a teaser, so `description*` is a plain-text summary here;
+   * `findPublicOne` serves the full HTML.
+   */
+  async findPublic() {
+    const rows = await this.prisma.event.findMany({
       where: { status: { in: [EventStatus.scheduled, EventStatus.active] } },
       include: {
         coverImage: true,
@@ -83,6 +88,11 @@ export class EventsService {
       },
       orderBy: { eventStartAt: 'asc' },
     });
+    return rows.map((row) => ({
+      ...row,
+      descriptionEn: htmlSummary(row.descriptionEn),
+      descriptionTh: htmlSummary(row.descriptionTh),
+    }));
   }
 
   /** Single scheduled/active event for the marketing website. */

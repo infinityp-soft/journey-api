@@ -15,13 +15,17 @@ export class DestinationsService extends BasePrismaService {
     });
   }
 
-  /** Published destinations for the marketing website, unpaginated. */
-  findPublic() {
-    return this.model.findMany({
+  /**
+   * Published destinations for the marketing website, unpaginated.
+   * List payload omits the rich `content*` HTML — the detail endpoint serves it.
+   */
+  async findPublic() {
+    const rows = await this.model.findMany({
       where: { status: PublishStatus.published },
       include: this.options.include,
       orderBy: this.options.defaultOrder,
     });
+    return rows.map(({ contentEn: _en, contentTh: _th, ...rest }) => rest);
   }
 
   /** Single published destination for the marketing website. */

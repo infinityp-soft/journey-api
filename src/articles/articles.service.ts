@@ -17,6 +17,12 @@ const ARTICLE_INCLUDE = {
   author: { select: { id: true, name: true, email: true, role: true } },
 } as const;
 
+/** Public responses never expose staff e-mail/role. */
+const PUBLIC_ARTICLE_INCLUDE = {
+  ...ARTICLE_INCLUDE,
+  author: { select: { id: true, name: true } },
+} as const;
+
 @Injectable()
 export class ArticlesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -88,22 +94,25 @@ export class ArticlesService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  /** Published/visible articles for the marketing website, newest first. */
-  findPublic(query: ArticleQueryDto = {}) {
-    return this.prisma.article.findMany({
+  /**
+   * Published/visible articles for the marketing website, newest first.
+   * List payload omits the rich `content*` HTML — `findPublicBySlug` serves it.
+   */
+  async findPublic(query: ArticleQueryDto = {}) {
+    const rows = await this.prisma.article.findMany({
       where: { status: PublishStatus.published, isVisible: true, destinationId: query.destinationId },
-      include: ARTICLE_INCLUDE,
+      include: PUBLIC_ARTICLE_INCLUDE,
       orderBy: { createdAt: 'desc' },
       // Public lists are paginated after client-side search/filtering.
-
     });
+    return rows.map(({ contentEn: _en, contentTh: _th, ...rest }) => rest);
   }
 
   /** Single published/visible article by slug for the marketing website. */
   async findPublicBySlug(slug: string) {
     const article = await this.prisma.article.findUnique({
       where: { slug },
-      include: ARTICLE_INCLUDE,
+      include: PUBLIC_ARTICLE_INCLUDE,
     });
     if (
       !article ||

@@ -224,6 +224,32 @@ sh upload.sh root@<IP> web-admin       # เฉพาะ CMS (jourey-web-admin)
 
 อย่าใช้ `prisma migrate reset` บนโปรดักชัน — มันดรอปทั้งฐาน
 
+### ย้ายรูป base64 ในเนื้อหาออกเป็นไฟล์ (รันครั้งเดียว)
+
+เนื้อหาที่บันทึกจาก editor รุ่นเก่าฝังรูปเป็น `data:image/...;base64` ไว้ใน HTML
+ทำให้ API ส่งข้อมูลหลายสิบ MB และเว็บโหลดช้า สคริปต์นี้อัปโหลดรูปเหล่านั้นเป็น WebP
+แล้วแทนที่ด้วย `/media/...` — รันได้ซ้ำ (รอบที่สองจะไม่เจออะไร)
+
+```bash
+sh backup.sh db                                                                   # สำรองก่อนเสมอ
+sh deploy.sh api                                                                  # ต้องเป็น image ที่มี dist/cli
+docker compose run --rm --no-deps api node dist/cli/extract-inline-images.js          # dry run ดูรายงาน
+docker compose run --rm --no-deps api node dist/cli/extract-inline-images.js --apply  # เขียนจริง
+```
+
+### ย่อรูปเดิมที่ใหญ่เกิน (รันครั้งเดียว)
+
+ตั้งแต่รุ่นนี้ API ย่อรูปตอนอัปโหลดให้ด้านยาวสุดไม่เกิน 1920px (WebP q82) — รูปที่อัปโหลด
+ก่อนหน้านี้ย่อด้วยสคริปต์นี้ ไฟล์ถูกเขียนทับที่ key เดิม URL ไม่เปลี่ยน
+
+```bash
+sh backup.sh media                                                          # สำรองไฟล์ก่อน
+docker compose run --rm --no-deps api node dist/cli/optimize-media.js          # dry run
+docker compose run --rm --no-deps api node dist/cli/optimize-media.js --apply  # เขียนจริง
+```
+
+รันหลัง `extract-inline-images.js --apply` เพื่อให้รูปที่เพิ่งย้ายออกมาถูกย่อด้วย
+
 ---
 
 ## คำสั่งที่ใช้บ่อย

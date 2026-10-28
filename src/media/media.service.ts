@@ -31,12 +31,33 @@ const MEDIA_REFERENCES: Array<[string, string]> = [
   ['site_settings', 'logo_id'],
 ];
 
+/**
+ * Rich-text (table, column) pairs whose HTML embeds `/media/<storageKey>` images
+ * from the editor. They are not FKs, so GC must look inside them too.
+ */
+export const RICH_TEXT_COLUMNS: Array<[string, string]> = [
+  ['about_us', 'bio_en'],
+  ['about_us', 'bio_th'],
+  ['destinations', 'content_en'],
+  ['destinations', 'content_th'],
+  ['articles', 'content_en'],
+  ['articles', 'content_th'],
+  ['visa_services', 'description_html_en'],
+  ['visa_services', 'description_html_th'],
+  ['testimonials', 'content_en'],
+  ['testimonials', 'content_th'],
+  ['events', 'description_en'],
+  ['events', 'description_th'],
+];
+
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-/** WebP quality 1–100. */
-const WEBP_QUALITY = 90;
+/** WebP quality 1–100. 82 is visually indistinguishable for photos at a fraction of 90's size. */
+const WEBP_QUALITY = 82;
 /** CPU effort 0 (fastest) – 6 (smallest). Uploads are not a hot path. */
 const WEBP_EFFORT = 6;
+/** Longest edge kept on upload — full-width heroes/banners are 1920px wide. */
+export const MAX_IMAGE_DIMENSION = 1920;
 
 @Injectable()
 export class MediaService {
@@ -113,11 +134,17 @@ export class MediaService {
     await this.prisma.mediaAsset.delete({ where: { id } });
   }
 
-  /** Auto-orient, strip metadata, encode as WebP. */
-  private async optimizeToWebp(buffer: Buffer) {
+  /** Auto-orient, cap to MAX_IMAGE_DIMENSION, strip metadata, encode as WebP. */
+  async optimizeToWebp(buffer: Buffer) {
     try {
       return await sharp(buffer)
         .rotate()
+        .resize({
+          width: MAX_IMAGE_DIMENSION,
+          height: MAX_IMAGE_DIMENSION,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
         .webp({
           quality: WEBP_QUALITY,
           effort: WEBP_EFFORT,
@@ -139,13 +166,19 @@ export class MediaService {
         `SELECT "${col}" AS id FROM "${table}" WHERE "${col}" IS NOT NULL`,
     ).join(' UNION ');
 
+    const inHtml = RICH_TEXT_COLUMNS.map(
+      ([table, col]) =>
+        `AND NOT EXISTS (SELECT 1 FROM "${table}" t WHERE strpos(t."${col}", m.storage_key) > 0)`,
+    ).join('\n          ');
+
     const orphans = await this.prisma.$queryRawUnsafe<
       Array<{ id: string; storage_key: string }>
     >(
       `SELECT m.id, m.storage_key
          FROM "media_assets" m
         WHERE m.created_at < now() - interval '1 day'
-          AND NOT EXISTS (SELECT 1 FROM (${union}) r WHERE r.id = m.id)`,
+          AND NOT EXISTS (SELECT 1 FROM (${union}) r WHERE r.id = m.id)
+          ${inHtml}`,
     );
 
     if (orphans.length === 0) return 0;
