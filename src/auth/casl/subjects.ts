@@ -19,6 +19,7 @@ export type AppSubject =
   | 'Destination'
   | 'Article'
   | 'ArticleCategory'
+  | 'ArticlePageSettings'
   | 'VisaService'
   | 'VisaDocument'
   | 'Testimonial'
@@ -47,6 +48,7 @@ export const EDITOR_CONTENT_SUBJECTS: AppSubject[] = [
   'Destination',
   'Article',
   'ArticleCategory',
+  'ArticlePageSettings',
   'VisaService',
   'VisaDocument',
   'Testimonial',

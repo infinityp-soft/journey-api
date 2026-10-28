@@ -35,9 +35,11 @@ import {
   CreateArticleDto,
   UpdateArticleCategoryDto,
   UpdateArticleDto,
+  UpdateArticlePageDto,
 } from './dto/article.dto';
 import {
   ArticleCategoryResponseDto,
+  ArticlePageSettingsResponseDto,
   ArticleResponseDto,
 } from './dto/article-response.dto';
 
@@ -57,6 +59,33 @@ export class ArticlesController {
   @ApiOkResponse({ type: [ArticleResponseDto] })
   findPublic(@Query() query: ArticleQueryDto) {
     return this.articles.findPublic(query);
+  }
+
+  // --- Page settings (singleton) — declared before `articles/public/:slug` and `articles/:id` ---
+  @Public()
+  @Get('articles/page-settings/public')
+  @ApiOperation({ summary: 'Get Articles page settings (public)' })
+  @ApiOkResponse({ type: ArticlePageSettingsResponseDto })
+  getPagePublic() {
+    return this.articles.getPageSettings();
+  }
+
+  @Get('articles/page-settings')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies(can(Action.Read, 'ArticlePageSettings'))
+  @ApiOperation({ summary: 'Get Articles page settings' })
+  @ApiOkResponse({ type: ArticlePageSettingsResponseDto })
+  getPage() {
+    return this.articles.getPageSettings();
+  }
+
+  @Patch('articles/page-settings')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies(can(Action.Update, 'ArticlePageSettings'))
+  @ApiOperation({ summary: 'Update Articles page settings (cover image)' })
+  @ApiOkResponse({ type: ArticlePageSettingsResponseDto })
+  updatePage(@Body() dto: UpdateArticlePageDto) {
+    return this.articles.updatePageSettings(dto);
   }
 
   /** Single published/visible article by slug for the marketing website. */

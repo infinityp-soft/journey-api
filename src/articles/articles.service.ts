@@ -5,7 +5,11 @@ import { buildWhere } from '../common/crud/build-where';
 import { slugify } from '../common/utils/slugify';
 import { PrismaService } from '../prisma/prisma.service';
 import { ArticleQueryDto } from './dto/article-query.dto';
-import { CreateArticleDto, UpdateArticleDto } from './dto/article.dto';
+import {
+  CreateArticleDto,
+  UpdateArticleDto,
+  UpdateArticlePageDto,
+} from './dto/article.dto';
 
 const ARTICLE_INCLUDE = {
   category: true,
@@ -171,5 +175,26 @@ export class ArticlesService {
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.article.delete({ where: { id } });
+  }
+
+  /** Singleton settings for the public Articles & News listing page. */
+  async getPageSettings() {
+    const existing = await this.prisma.articlePageSettings.findFirst({
+      include: { headerImage: true },
+    });
+    if (existing) return existing;
+    return this.prisma.articlePageSettings.create({
+      data: {},
+      include: { headerImage: true },
+    });
+  }
+
+  async updatePageSettings(dto: UpdateArticlePageDto) {
+    const settings = await this.getPageSettings();
+    return this.prisma.articlePageSettings.update({
+      where: { id: settings.id },
+      data: dto,
+      include: { headerImage: true },
+    });
   }
 }

@@ -38,6 +38,7 @@ URL ที่ฝังลง frontend bundle เป็น **relative path** (`/a
 | `docker-compose.yml` | นิยาม 5 service — api / web / web-admin / db / rustfs |
 | `.env.example` | เทมเพลตของ `.env` (`.env` ตัวจริงไม่อยู่ใน git) |
 | `upload.ps1` | ส่งซอร์สจาก Windows ขึ้นเซิร์ฟเวอร์ (รันที่เครื่อง dev) |
+| `upload.sh` | เหมือน `upload.ps1` แต่สำหรับ macOS / Linux |
 | `deploy.sh` | build + สลับ container โดยไม่แตะฐานข้อมูล |
 | `backup.sh` | สำรอง Postgres + ไฟล์ rustfs |
 | `restore.sh` | กู้คืนจากโฟลเดอร์ที่ `backup.sh` สร้าง |
@@ -116,6 +117,22 @@ cd D:\journey\journey-api\deploy
 แล้ว scp ขึ้น `/tmp` → แตกไฟล์ที่ `/opt/journey` → คัดลอกโฟลเดอร์ `deploy/` ไปวางให้อัตโนมัติ
 ไฟล์ `.env` บนเซิร์ฟเวอร์ไม่ถูกทับ เพราะไม่ได้อยู่ในซอร์ส
 
+จาก Mac / Linux ใช้ `upload.sh` แทน ทำงานแบบเดียวกัน
+
+```bash
+cd ~/journey/journey-api/deploy
+sh upload.sh root@<IP>
+```
+
+สำหรับ deploy
+
+```bash
+ssh root@<IP>
+cd /opt/journey/deploy
+sh backup.sh && sh migrate.sh && sh deploy.sh
+
+
+
 **ทางที่ 2 — git clone บนเซิร์ฟเวอร์**
 
 ```bash
@@ -174,8 +191,18 @@ cd D:\journey\journey-api\deploy
 .\upload.ps1 -Server root@<IP> -Target web-admin # เฉพาะ CMS (jourey-web-admin)
 ```
 
-> `-Target web` / `-Target web-admin` ไม่ sync โฟลเดอร์ `deploy/`
-> รอบไหนแก้ `docker-compose.yml` ให้ใช้ `-Target api` หรือไม่ใส่ `-Target` เลย
+### ที่เครื่อง dev (macOS / Linux)
+
+```bash
+cd ~/journey/journey-api/deploy
+sh upload.sh root@<IP>                 # ทั้งสาม (ค่าเริ่มต้น)
+sh upload.sh root@<IP> api             # เฉพาะ backend
+sh upload.sh root@<IP> web             # เฉพาะเว็บสาธารณะ (journey-web)
+sh upload.sh root@<IP> web-admin       # เฉพาะ CMS (jourey-web-admin)
+```
+
+> `-Target web` / `-Target web-admin` (หรือ `web` / `web-admin` ใน `upload.sh`) ไม่ sync โฟลเดอร์ `deploy/`
+> รอบไหนแก้ `docker-compose.yml` ให้ใช้ target `api` หรือไม่ใส่ target เลย
 
 ข้ามขั้นนี้ได้ถ้าใช้ git บนเซิร์ฟเวอร์ — `deploy.sh` จะ `git pull` ให้เองถ้าโฟลเดอร์นั้นเป็น git repo
 ถ้าไม่ใช่ก็ข้ามไป build เลย

@@ -105,3 +105,17 @@ export class ArticleResponseDto {
   @ApiProperty({ type: String, format: 'date-time' })
   updatedAt: Date;
 }
+
+export class ArticlePageSettingsResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  headerImageId: string | null;
+
+  @ApiPropertyOptional({ type: MediaAssetResponseDto, nullable: true })
+  headerImage?: MediaAssetResponseDto | null;
+
+  @ApiProperty()
+  updatedAt: Date;
+}

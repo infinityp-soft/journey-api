@@ -129,3 +129,10 @@ export class CreateArticleCategoryDto {
 export class UpdateArticleCategoryDto extends PartialType(
   CreateArticleCategoryDto,
 ) {}
+
+export class UpdateArticlePageDto {
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID()
+  headerImageId?: string | null;
+}

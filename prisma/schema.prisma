@@ -126,6 +126,7 @@ model MediaAsset {
   testimonialPortraits Testimonial[]
   videoThumbnails      Video[]
   videoPageHeaders     VideoPageSettings[]
+  articlePageHeaders   ArticlePageSettings[]
   eventCovers          Event[]
   siteContactCovers    SiteSettings[]      @relation("SiteContactCover")
   siteLogos            SiteSettings[]      @relation("SiteLogo")
@@ -430,6 +431,16 @@ model Testimonial {
 // ---------------------------------------------------------------------------
 // Videos (page settings singleton + list)
 // ---------------------------------------------------------------------------
+model ArticlePageSettings {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  headerImageId String?     @map("header_image_id") @db.Uuid
+  headerImage   MediaAsset? @relation(fields: [headerImageId], references: [id], onDelete: SetNull)
+  isSingleton   Boolean     @unique @default(true) @map("is_singleton")
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("article_page_settings")
+}
+
 model VideoPageSettings {
   id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   pageTitleEn   String?     @map("page_title_en")
