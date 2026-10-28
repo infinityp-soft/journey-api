@@ -1,0 +1,63 @@
+// Run only against the disposable local API described in README.md.
+import assert from 'node:assert/strict';
+import { writeFile } from 'node:fs/promises';
+import sharp from 'sharp';
+const base = process.env.TEST_API_URL || 'http://localhost:3101/api';
+assert.equal(new URL(base).hostname, 'localhost', 'Use a disposable localhost API');
+assert.equal(new URL(base).port, '3101', 'Use the dedicated test API port');
+const login = await fetch(`${base}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'qa@example.test', password: process.env.TEST_ADMIN_PASSWORD || 'JourneyLocalTest123' }) });
+assert.equal(login.status, 200, 'Test account can log in');
+const { accessToken } = await login.json();
+assert.ok(accessToken);
+async function api(path, method = 'GET', body, publicRequest = false) {
+  const response = await fetch(`${base}${path}`, { method, headers: { 'Content-Type': 'application/json', ...(!publicRequest && { Authorization: `Bearer ${accessToken}` }) }, ...(body !== undefined && { body: JSON.stringify(body) }) });
+  assert.ok(response.ok, `${method} ${path} returns ${response.status}: ${response.ok ? '' : await response.text()}`);
+  return response.status === 204 ? undefined : response.json();
+}
+const assets = [];
+for (const background of ['#d1e5ff', '#f3d8c8', '#d5eed7']) {
+  const image = await sharp({ create: { width: 1200, height: 675, channels: 3, background } }).png().toBuffer();
+  const form = new FormData(); form.set('file', new File([image], 'test-cover.png', { type: 'image/png' }));
+  const response = await fetch(`${base}/media-assets`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: form });
+  assert.equal(response.status, 201);
+  const media = await response.json(); assets.push(media);
+  assert.equal((await fetch(`http://localhost:3101/media/${media.storageKey}`)).status, 200);
+}
+console.log('PASS: three images upload and are publicly readable');
+const html = '<p>Country details with three uploaded images</p>' + assets.map((asset) => `<img src="/media/${asset.storageKey}">`).join('');
+const australia = await api('/destinations', 'POST', { nameEn: 'Australia QA', nameTh: 'ออสเตรเลีย QA', status: 'published', coverImageId: assets[0].id, shortDescEn: 'Discover education in Australia', contentEn: html, contentTh: html });
+const uk = await api('/destinations', 'POST', { nameEn: 'United Kingdom QA', nameTh: 'สหราชอาณาจักร QA', status: 'published' });
+const edited = await api(`/destinations/${australia.id}`, 'PATCH', { contentEn: html + '<p>Saved again</p>' });
+assert.equal((edited.contentEn.match(/<img/g) || []).length, 3);
+console.log('PASS: destination saves and reloads more than two images');
+const category = await api('/article-categories', 'POST', { nameEn: 'Study tips QA', nameTh: 'เคล็ดลับเรียนต่อ QA' });
+const article = await api('/articles', 'POST', { titleEn: 'Australia study guide QA', titleTh: 'คู่มือเรียนต่อออสเตรเลีย QA', categoryId: category.id, destinationId: australia.id, featuredImageId: assets[0].id, status: 'published', isVisible: true, contentEn: html, contentTh: html });
+const draft = await api('/articles', 'POST', { titleEn: 'Draft QA', status: 'draft' });
+const other = await api('/articles', 'POST', { titleEn: 'UK QA', destinationId: uk.id, status: 'published', isVisible: true });
+assert.equal((await api(`/articles/public?destinationId=${australia.id}`, 'GET', undefined, true)).length, 1);
+assert.equal((await api(`/articles/public/${article.slug}`, 'GET', undefined, true)).featuredImage.storageKey, assets[0].storageKey);
+await Promise.all(Array.from({ length: 4 }, () => api(`/articles/public/${article.slug}/views`, 'POST', undefined, true)));
+assert.equal((await api(`/articles/public/${article.slug}`, 'GET', undefined, true)).viewCount, 4);
+const denied = await fetch(`${base}/articles/public/${draft.slug}/views`, { method: 'POST' });
+assert.equal(denied.status, 404);
+await api(`/articles/${other.id}`, 'PATCH', { destinationId: null });
+assert.equal((await api(`/articles/${other.id}`)).destinationId, null);
+console.log('PASS: country filtering, cover images, atomic view counts and unpublished visibility');
+const settings = await api('/settings', 'PATCH', { addressEn: 'QA office address', addressTh: 'ที่อยู่สำนักงาน QA', preFooterDescriptionEn: 'Start your journey', preFooterDescriptionTh: 'เริ่มต้นการเดินทาง', preFooterBodyEn: 'Complete the form for advice', preFooterBodyTh: 'กรอกฟอร์มเพื่อให้ที่ปรึกษาติดต่อกลับ' });
+assert.equal(settings.preFooterBodyTh, 'กรอกฟอร์มเพื่อให้ที่ปรึกษาติดต่อกลับ');
+assert.equal((await api('/settings/public', 'GET', undefined, true)).preFooterBodyEn, 'Complete the form for advice');
+for (const platform of ['facebook', 'line', 'youtube']) await api('/settings/social-links', 'POST', { platform, url: `https://${platform === 'line' ? 'line.me' : platform + '.com'}` });
+const visa = await api('/visa-services', 'POST', { titleEn: 'Student Visa QA', titleTh: 'วีซ่านักเรียน QA', headerImageId: assets[1].id, descriptionHtmlEn: html, status: 'active' });
+assert.equal((await api('/visa-services/public', 'GET', undefined, true))[0].headerImage.storageKey, assets[1].storageKey);
+console.log('PASS: bilingual pre-footer descriptions, social links and visa header image');
+const event = await api('/events', 'POST', { nameEn: 'Study event QA', nameTh: 'กิจกรรมเรียนต่อ QA', status: 'scheduled', eventStartAt: '2026-11-28T03:00:00.000Z', eventEndAt: '2026-11-28T05:00:00.000Z', coverImageId: assets[2].id, descriptionEn: 'A'.repeat(1000), descriptionTh: 'กิจกรรม '.repeat(100), registrationFormEnabled: true });
+assert.ok((await api('/events/public', 'GET', undefined, true)).some((item) => item.id === event.id && item.coverImage.id === assets[2].id));
+await api(`/events/${event.id}`, 'PATCH', { eventStartAt: '2026-11-29T03:00:00.000Z' });
+assert.equal((await api(`/events/${event.id}`)).eventStartAt, '2026-11-29T03:00:00.000Z');
+await api(`/events/${event.id}`, 'PATCH', { status: 'completed' });
+assert.ok(!(await api('/events/public', 'GET', undefined, true)).some((item) => item.id === event.id));
+await api(`/events/${event.id}`, 'PATCH', { status: 'scheduled' });
+const summary = await api('/dashboard/summary'); assert.ok(summary.stats.totalArticles >= 3);
+console.log('PASS: event scheduling/editing, completed visibility, event cover and dashboard summary');
+await writeFile('/tmp/journey-trello-test-fixtures.json', JSON.stringify({ base, australia: australia.id, article: article.slug, event: event.id, visa: visa.id, assets: assets.map(({ storageKey }) => storageKey) }));
+console.log('All integration regressions passed. Fixtures remain only in the disposable test database.');

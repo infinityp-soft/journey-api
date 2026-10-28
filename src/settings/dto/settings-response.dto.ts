@@ -92,6 +92,12 @@ export class SiteSettingsResponseDto {
   @ApiPropertyOptional({ nullable: true })
   preFooterDescriptionTh: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  preFooterBodyEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  preFooterBodyTh: string | null;
+
   @ApiPropertyOptional({ enum: SocialPlatform, nullable: true })
   preFooterCtaPlatform: SocialPlatform | null;
 

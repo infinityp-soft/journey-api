@@ -57,6 +57,12 @@ export class ArticleResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   categoryId: string | null;
 
+  @ApiPropertyOptional({ nullable: true, format: 'uuid' })
+  destinationId: string | null;
+
+  @ApiProperty({ default: 0 })
+  viewCount: number;
+
   @ApiPropertyOptional({ type: ArticleCategoryResponseDto, nullable: true })
   category?: ArticleCategoryResponseDto | null;
 

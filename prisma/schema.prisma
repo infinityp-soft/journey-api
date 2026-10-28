@@ -305,6 +305,8 @@ model Destination {
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  articles Article[]
+
   @@index([status])
   @@index([sortOrder])
   @@map("destinations")
@@ -337,6 +339,9 @@ model Article {
   excerptTh       String?          @map("excerpt_th")
   contentEn       String?          @map("content_en")
   contentTh       String?          @map("content_th")
+  destinationId   String?          @map("destination_id") @db.Uuid
+  destination     Destination?     @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  viewCount       Int              @default(0) @map("view_count")
   categoryId      String?          @map("category_id") @db.Uuid
   category        ArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   authorId        String?          @map("author_id") @db.Uuid
@@ -355,6 +360,7 @@ model Article {
 
   @@index([status])
   @@index([categoryId])
+  @@index([destinationId])
   @@index([publishedAt])
   @@map("articles")
 }
@@ -571,6 +577,8 @@ model SiteSettings {
   preFooterTitleTh       String?         @map("pre_footer_title_th")
   preFooterDescriptionEn String?         @map("pre_footer_description_en")
   preFooterDescriptionTh String?         @map("pre_footer_description_th")
+  preFooterBodyEn        String?         @map("pre_footer_body_en")
+  preFooterBodyTh        String?         @map("pre_footer_body_th")
   preFooterCtaPlatform   SocialPlatform? @map("pre_footer_cta_platform")
   preFooterCtaLabelEn    String?         @map("pre_footer_cta_label_en")
   preFooterCtaLabelTh    String?         @map("pre_footer_cta_label_th")

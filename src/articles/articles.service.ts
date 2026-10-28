@@ -67,7 +67,7 @@ export class ArticlesService {
     const limit = query.limit ?? 20;
     const where = buildWhere<Prisma.ArticleWhereInput>(query, {
       searchable: ['titleEn', 'titleTh'],
-      filterable: ['status', 'categoryId', 'isVisible'],
+      filterable: ['status', 'categoryId', 'destinationId', 'isVisible'],
       dateField: 'createdAt',
     });
 
@@ -85,12 +85,13 @@ export class ArticlesService {
   }
 
   /** Published/visible articles for the marketing website, newest first. */
-  findPublic() {
+  findPublic(query: ArticleQueryDto = {}) {
     return this.prisma.article.findMany({
-      where: { status: PublishStatus.published, isVisible: true },
+      where: { status: PublishStatus.published, isVisible: true, destinationId: query.destinationId },
       include: ARTICLE_INCLUDE,
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      // Public lists are paginated after client-side search/filtering.
+
     });
   }
 
@@ -108,6 +109,15 @@ export class ArticlesService {
       throw new NotFoundException('Article not found');
     }
     return article;
+  }
+
+  async recordPublicView(slug: string) {
+    const result = await this.prisma.article.updateMany({
+      where: { slug, status: PublishStatus.published, isVisible: true },
+      data: { viewCount: { increment: 1 } },
+    });
+    if (!result.count) throw new NotFoundException('Article not found');
+    return this.prisma.article.findUnique({ where: { slug }, select: { viewCount: true } });
   }
 
   async findOne(id: string) {

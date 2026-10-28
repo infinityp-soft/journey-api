@@ -55,8 +55,8 @@ export class ArticlesController {
   @Get('articles/public')
   @ApiOperation({ summary: 'List published articles (public)' })
   @ApiOkResponse({ type: [ArticleResponseDto] })
-  findPublic() {
-    return this.articles.findPublic();
+  findPublic(@Query() query: ArticleQueryDto) {
+    return this.articles.findPublic(query);
   }
 
   /** Single published/visible article by slug for the marketing website. */
@@ -66,6 +66,13 @@ export class ArticlesController {
   @ApiOkResponse({ type: ArticleResponseDto })
   findPublicBySlug(@Param('slug') slug: string) {
     return this.articles.findPublicBySlug(slug);
+  }
+
+  @Public()
+  @Post('articles/public/:slug/views')
+  @ApiOperation({ summary: 'Record a published article view (public)' })
+  recordPublicView(@Param('slug') slug: string) {
+    return this.articles.recordPublicView(slug);
   }
 
   // --- Categories (Manage Categories modal) ---

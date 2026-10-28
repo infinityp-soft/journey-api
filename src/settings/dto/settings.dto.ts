@@ -112,6 +112,16 @@ export class UpdateSiteSettingsDto {
   @IsString()
   preFooterDescriptionTh?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterBodyEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preFooterBodyTh?: string;
+
   @ApiPropertyOptional({
     enum: SocialPlatform,
     description: 'Channel the CTA button points at, e.g. line',

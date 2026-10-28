@@ -126,7 +126,7 @@ Modules add their own equality filters on top:
 | `/api/banners` | `isActive` |
 | `/api/staff` | `status`, `isVisible` |
 | `/api/destinations` | `status` |
-| `/api/articles` | `status`, `categoryId`, `isVisible` |
+| `/api/articles` | `status`, `categoryId`, `destinationId`, `isVisible` |
 | `/api/visa-services` | `status`, `country` |
 | `/api/testimonials` | `status`, `isFeatured`, `counselorId` |
 | `/api/videos` | `status` |
@@ -135,3 +135,9 @@ Modules add their own equality filters on top:
 
 Schema source of truth: `prisma/schema.prisma`.  
 ER diagram: [`prisma/ERD.md`](./prisma/ERD.md).
+
+## Trello regression verification (2026-10-28)
+
+Apply migration `20261028000000_article_destinations_views_cta_body` before deploying the companion admin/web changes. It adds article destination assignment/views and `preFooterBodyEn/Th`. Public article GETs do not count views; POST `/api/articles/public/:slug/views` does. Public `/api/articles/public?destinationId=<UUID>` filters related articles.
+
+`test/trello-regressions.mjs` exercises a **disposable localhost:3101 API** backed by a separate test database. Create/migrate a temporary PostgreSQL database, start this API on port 3101 with that DATABASE_URL and a temporary UPLOAD_DIR, and seed `qa@example.test` using password `JourneyLocalTest123` (or TEST_ADMIN_PASSWORD). Run `node test/trello-regressions.mjs`. The script deliberately creates synthetic fixtures and keeps them for browser QA; remove the disposable container/media directory afterward. Do not point it at production.

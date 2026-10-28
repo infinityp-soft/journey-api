@@ -15,6 +15,11 @@ export class ArticleQueryDto extends PaginationQueryDto {
   @IsUUID()
   categoryId?: string;
 
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  destinationId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @ToBoolean()
