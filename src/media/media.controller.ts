@@ -47,7 +47,7 @@ export class MediaController {
   @ApiOperation({
     summary: 'Upload a media asset',
     description:
-      'Optimizes the image with sharp: auto-orient, strip metadata, WebP quality 90 at full resolution.',
+      'Stores uploaded JPEG, PNG or WebP bytes after checking image headers. The admin browser optimizes images before upload.',
   })
   @ApiCreatedResponse({ type: MediaAssetResponseDto })
   @ApiConsumes('multipart/form-data')

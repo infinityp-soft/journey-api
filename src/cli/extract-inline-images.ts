@@ -5,8 +5,7 @@
  *   node dist/cli/extract-inline-images.js            # dry run (report only)
  *   node dist/cli/extract-inline-images.js --apply    # write changes
  *
- * Back up the database first. Images go through MediaService.upload, so they are
- * converted to WebP exactly like normal uploads.
+ * Back up the database first. Images are optimized explicitly here before MediaService.upload.
  */
 import 'reflect-metadata';
 import { createHash } from 'node:crypto';
@@ -39,17 +38,18 @@ async function main() {
     for (const row of rows) {
       const replacements = new Map<string, string>();
       for (const match of row.html.matchAll(DATA_URI)) {
-        const [uri, ext, payload] = match;
+        const [uri, , payload] = match;
         if (replacements.has(uri)) continue;
         const buffer = Buffer.from(payload.replace(/\s+/g, ''), 'base64');
         const hash = createHash('sha256').update(buffer).digest('hex');
         let src = uploaded.get(hash);
         if (!src) {
           if (apply) {
+            const optimized = await media.optimizeToWebp(buffer);
             const asset = await media.upload({
-              buffer,
-              mimetype: ext === 'jpg' ? 'image/jpeg' : `image/${ext}`,
-              originalname: `inline-${hash.slice(0, 12)}.${ext}`,
+              buffer: optimized.data,
+              mimetype: 'image/webp',
+              originalname: `inline-${hash.slice(0, 12)}.webp`,
             } as Express.Multer.File);
             src = `/media/${asset.storageKey}`;
           } else {

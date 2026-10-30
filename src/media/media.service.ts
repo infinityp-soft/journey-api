@@ -80,27 +80,47 @@ export class MediaService {
       );
     }
 
-    const output = await this.optimizeToWebp(file.buffer);
+    let metadata: sharp.Metadata;
+    try {
+      // metadata() reads headers; it does not decode/resize/re-encode pixels.
+      metadata = await sharp(file.buffer).metadata();
+    } catch {
+      throw new BadRequestException('Invalid or corrupt image file');
+    }
+    const formats: Record<string, { extension: string; mimeType: string }> = {
+      jpeg: { extension: 'jpg', mimeType: 'image/jpeg' },
+      png: { extension: 'png', mimeType: 'image/png' },
+      webp: { extension: 'webp', mimeType: 'image/webp' },
+    };
+    const format = formats[metadata.format ?? ''];
+    if (
+      !format ||
+      format.mimeType !== file.mimetype ||
+      !metadata.width ||
+      !metadata.height
+    ) {
+      throw new BadRequestException('Invalid image format');
+    }
 
     const now = new Date();
     const yyyy = String(now.getUTCFullYear());
     const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(now.getUTCDate()).padStart(2, '0');
-    const filename = `${randomUUID()}.webp`;
+    const filename = `${randomUUID()}.${format.extension}`;
     const storageKey = path.posix.join(yyyy, mm, dd, filename);
 
-    await this.storage.put(storageKey, output.data, 'image/webp');
+    await this.storage.put(storageKey, file.buffer, format.mimeType);
 
-    const checksum = createHash('sha256').update(output.data).digest('hex');
+    const checksum = createHash('sha256').update(file.buffer).digest('hex');
 
     return this.prisma.mediaAsset.create({
       data: {
         storageKey,
         originalFilename: file.originalname,
-        mimeType: 'image/webp',
-        sizeBytes: output.info.size,
-        width: output.info.width ?? null,
-        height: output.info.height ?? null,
+        mimeType: format.mimeType,
+        sizeBytes: file.buffer.length,
+        width: metadata.width,
+        height: metadata.height,
         altText: altText ?? null,
         checksumSha256: checksum,
         uploadedById: uploadedById ?? null,
@@ -134,7 +154,7 @@ export class MediaService {
     await this.prisma.mediaAsset.delete({ where: { id } });
   }
 
-  /** Auto-orient, cap to MAX_IMAGE_DIMENSION, strip metadata, encode as WebP. */
+  /** Offline CLI maintenance only; never called by the upload endpoint. */
   async optimizeToWebp(buffer: Buffer) {
     try {
       return await sharp(buffer)
