@@ -23,7 +23,7 @@ export class DestinationsService extends BasePrismaService {
     const rows = await this.model.findMany({
       where: { status: PublishStatus.published },
       include: this.options.include,
-      orderBy: this.options.defaultOrder,
+      orderBy: this.defaultOrderBy,
     });
     return rows.map(({ contentEn: _en, contentTh: _th, ...rest }) => rest);
   }

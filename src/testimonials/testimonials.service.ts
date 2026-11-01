@@ -20,7 +20,7 @@ export class TestimonialsService extends BasePrismaService {
     return this.model.findMany({
       where: { status: ReviewStatus.published },
       include: this.options.include,
-      orderBy: this.options.defaultOrder,
+      orderBy: this.defaultOrderBy,
       take: 20,
     });
   }

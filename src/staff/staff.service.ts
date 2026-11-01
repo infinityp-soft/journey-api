@@ -19,7 +19,7 @@ export class StaffService extends BasePrismaService {
     return this.model.findMany({
       where: { isVisible: true },
       include: this.options.include,
-      orderBy: this.options.defaultOrder,
+      orderBy: this.defaultOrderBy,
     });
   }
 }

@@ -21,7 +21,7 @@ export class VideosService extends BasePrismaService {
     return this.prisma.video.findMany({
       where: { status: PublishStatus.published },
       include: { thumbnail: true },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: this.defaultOrderBy,
     });
   }
 

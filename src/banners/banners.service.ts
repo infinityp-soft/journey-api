@@ -19,7 +19,7 @@ export class BannersService extends BasePrismaService {
     return this.prisma.banner.findMany({
       where: { isActive: true },
       include: { image: true },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: this.defaultOrderBy,
     });
   }
 }

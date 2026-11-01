@@ -47,8 +47,8 @@ export class BasePrismaService<T = any> {
     const where = buildWhere(query, this.options);
 
     const orderBy = query.sort
-      ? { [query.sort]: (query.order ?? 'asc').toLowerCase() }
-      : (this.options.defaultOrder ?? { createdAt: 'desc' });
+      ? [{ [query.sort]: (query.order ?? 'asc').toLowerCase() }, { id: 'asc' }]
+      : this.defaultOrderBy;
 
     const [data, total] = await Promise.all([
       this.model.findMany({
@@ -88,14 +88,46 @@ export class BasePrismaService<T = any> {
   }
 
   /** Bulk drag-and-drop reordering: [{ id, sortOrder }, ...] */
+  /**
+   * Default ordering with `id` as a tie-breaker. Rows sharing a sortOrder (new
+   * rows all start at 0) would otherwise come back in arbitrary order, so
+   * skip/take pages could repeat or drop rows.
+   */
+  protected get defaultOrderBy(): Record<string, 'asc' | 'desc'>[] {
+    return [this.options.defaultOrder ?? { createdAt: 'desc' }, { id: 'asc' }];
+  }
+
+  /**
+   * Applies a reorder made on one page of the list and renumbers the whole
+   * list 0..n-1. The moved rows keep the slots they already occupy, in the
+   * requested order, so rows on other pages never jump between pages.
+   */
   async reorder(items: { id: string; sortOrder: number }[]): Promise<void> {
+    const rows: { id: string; sortOrder: number }[] = await this.model.findMany(
+      { select: { id: true, sortOrder: true }, orderBy: this.defaultOrderBy },
+    );
+    const known = new Set(rows.map((row) => row.id));
+    if (items.some((item) => !known.has(item.id))) {
+      throw new NotFoundException('Resource not found');
+    }
+
+    const moved = new Set(items.map((item) => item.id));
+    const requested = [...items]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item) => item.id);
+    let next = 0;
+    const ordered = rows.map((row) =>
+      moved.has(row.id) ? requested[next++] : row.id,
+    );
+
+    const current = new Map(rows.map((row) => [row.id, row.sortOrder]));
     await Promise.all(
-      items.map((i) =>
-        this.model.update({
-          where: { id: i.id },
-          data: { sortOrder: i.sortOrder },
-        }),
-      ),
+      ordered
+        .map((id, sortOrder) => ({ id, sortOrder }))
+        .filter(({ id, sortOrder }) => current.get(id) !== sortOrder)
+        .map(({ id, sortOrder }) =>
+          this.model.update({ where: { id }, data: { sortOrder } }),
+        ),
     );
   }
 }
