@@ -11,8 +11,12 @@ export class TestimonialsService extends BasePrismaService {
       searchable: ['studentNameEn', 'studentNameTh', 'locationEn'],
       filterable: ['status', 'isFeatured', 'counselorId'],
       dateField: 'createdAt',
-      defaultOrder: { updatedAt: 'desc' },
     });
+  }
+
+  /** Most recently updated first, with no tie-breaker. */
+  protected get defaultOrderBy(): Record<string, 'asc' | 'desc'>[] {
+    return [{ updatedAt: 'desc' }];
   }
 
   /** Published testimonials for the marketing website, most recently updated first. */
