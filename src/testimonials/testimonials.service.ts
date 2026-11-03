@@ -11,11 +11,11 @@ export class TestimonialsService extends BasePrismaService {
       searchable: ['studentNameEn', 'studentNameTh', 'locationEn'],
       filterable: ['status', 'isFeatured', 'counselorId'],
       dateField: 'createdAt',
-      defaultOrder: { sortOrder: 'asc' },
+      defaultOrder: { updatedAt: 'desc' },
     });
   }
 
-  /** Published testimonials for the marketing website, in the admin's sortOrder. */
+  /** Published testimonials for the marketing website, most recently updated first. */
   findPublic() {
     return this.model.findMany({
       where: { status: ReviewStatus.published },
