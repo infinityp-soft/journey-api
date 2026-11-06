@@ -32,6 +32,9 @@ export class TestimonialResponseDto {
   @ApiPropertyOptional({ nullable: true })
   locationTh: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  institution: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   counselorId: string | null;
 

@@ -31,6 +31,11 @@ export class CreateTestimonialDto {
   @IsString()
   locationTh?: string;
 
+  @ApiPropertyOptional({ example: 'University of Melbourne' })
+  @IsOptional()
+  @IsString()
+  institution?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

@@ -10,8 +10,15 @@ export class StaffService extends BasePrismaService {
       searchable: ['fullNameEn', 'fullNameTh', 'email'],
       filterable: ['status', 'isVisible'],
       dateField: 'createdAt',
-      defaultOrder: { sortOrder: 'asc' },
     });
+  }
+
+  /**
+   * The admin's drag-and-drop order. New members start at sortOrder 0 and so
+   * tie with the first row; createdAt puts the newest of them first.
+   */
+  protected get defaultOrderBy(): Record<string, 'asc' | 'desc'>[] {
+    return [{ sortOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }];
   }
 
   /** Visible staff members for the marketing website, unpaginated. */

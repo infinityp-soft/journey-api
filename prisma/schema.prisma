@@ -411,6 +411,7 @@ model Testimonial {
   studentNameTh   String?      @map("student_name_th")
   locationEn      String?      @map("location_en")
   locationTh      String?      @map("location_th")
+  institution     String?
   counselorId     String?      @map("counselor_id") @db.Uuid
   counselor       StaffMember? @relation(fields: [counselorId], references: [id], onDelete: SetNull)
   contentEn       String?      @map("content_en")
