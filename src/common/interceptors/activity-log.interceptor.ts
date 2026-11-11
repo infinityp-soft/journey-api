@@ -19,7 +19,54 @@ const SKIP_PREFIXES = [
   '/api/activity-logs',
   '/api/dashboard',
   '/api/analytics',
+  // Media uploads happen as a side step of saving another record (cover,
+  // photo, editor image) and would show up as a second row at the same time.
+  '/api/media-assets',
 ];
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Field names that hold a record's display name, in order of preference. */
+const NAME_KEYS = [
+  'titleEn',
+  'nameEn',
+  'fullNameEn',
+  'labelEn',
+  'name',
+  'title',
+  'titleTh',
+  'nameTh',
+  'fullNameTh',
+  'labelTh',
+  'firstName',
+];
+
+/** Best-effort display name of the record a mutation returned. */
+function recordName(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object') return undefined;
+  const record = body as Record<string, unknown>;
+  for (const key of NAME_KEYS) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) {
+      const name = value.trim();
+      return name.length > 80 ? `${name.slice(0, 77)}...` : name;
+    }
+  }
+  return undefined;
+}
+
+/** Sub-action from the path, e.g. /api/events/:id/status → "status". */
+function subAction(path: string): string | undefined {
+  const segments = path
+    .replace(/^\/api\/?/, '')
+    .split('?')[0]
+    .split('/')
+    .filter(Boolean)
+    .slice(1)
+    .filter((segment) => !UUID_RE.test(segment));
+  return segments.length ? segments.join(' ') : undefined;
+}
 
 function actionFromMethod(method: string): string {
   switch (method) {
@@ -83,7 +130,12 @@ export class ActivityLogInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    // Only CMS users' actions belong in the activity feed. Public website
+    // calls (article views, lead/event sign-ups, password reset) have no user
+    // and used to flood the log with anonymous "Created …" rows.
     const user = req.user;
+    if (!user?.id) return next.handle();
+
     const { entityType, summary } = menuFromPath(path);
     const action = actionFromMethod(method);
 
@@ -98,14 +150,23 @@ export class ActivityLogInterceptor implements NestInterceptor {
               (body as { id: string }).id) ||
             (typeof req.params?.id === 'string' ? req.params.id : undefined);
 
+          const name = recordName(body);
+          const detail = subAction(path);
+          const verb = `${action.charAt(0).toUpperCase()}${action.slice(1)}`;
+          const text = [
+            `${verb} ${summary}`,
+            detail ? ` (${detail})` : '',
+            name ? `: "${name}"` : '',
+          ].join('');
+
           void this.activity
             .record({
-              userId: user?.id,
+              userId: user.id,
               action,
               entityType,
               entityId,
-              summary: `${action.charAt(0).toUpperCase()}${action.slice(1)} ${summary}`,
-              metadata: { method, path },
+              summary: text,
+              metadata: { method, path, menu: summary, name, detail },
             })
             .catch(() => undefined);
         },
