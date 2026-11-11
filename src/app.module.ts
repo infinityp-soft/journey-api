@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BannersModule } from './banners/banners.module';
 import { MediaUrlInterceptor } from './common/interceptors/media-url.interceptor';
+import { RateLimitGuard } from './common/rate-limit/rate-limit.guard';
 import { ActivityLogInterceptor } from './common/interceptors/activity-log.interceptor';
 import configuration from './config/configuration';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -47,6 +48,7 @@ import { VisaModule } from './visa/visa.module';
     SettingsModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_INTERCEPTOR, useClass: MediaUrlInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ActivityLogInterceptor },

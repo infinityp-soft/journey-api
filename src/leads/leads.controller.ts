@@ -1,3 +1,4 @@
+import { RateLimit } from '../common/rate-limit/rate-limit.guard';
 import {
   Body,
   Controller,
@@ -38,6 +39,7 @@ export class LeadsController {
 
   /** Public lead capture from the marketing website. */
   @Public()
+  @RateLimit({ limit: 5, windowSec: 10 * 60, overall: { limit: 100, windowSec: 60 * 60 } })
   @Post('submit')
   @ApiOperation({ summary: 'Submit a lead (public)' })
   @ApiCreatedResponse({ type: LeadResponseDto })

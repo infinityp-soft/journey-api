@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  IsNotEmpty,
+  MaxLength,
   IsEmail,
   IsEnum,
   IsInt,
@@ -12,25 +14,31 @@ export class CreateLeadDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   leadCode?: string;
 
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
   fullName: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsEmail()
+  @MaxLength(254)
   email?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   phone?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   interestCountry?: string;
 
   @ApiPropertyOptional()
@@ -41,11 +49,13 @@ export class CreateLeadDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   duration?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   degreeLevel?: string;
 
   @ApiPropertyOptional({ enum: LeadTopic })
@@ -61,6 +71,7 @@ export class CreateLeadDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   notes?: string;
 }
 

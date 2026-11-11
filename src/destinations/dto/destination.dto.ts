@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  IsNotEmpty,
   IsString,
   IsUUID,
   Min,
@@ -12,6 +13,7 @@ import { PublishStatus } from '../../common/enums';
 export class CreateDestinationDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   nameEn: string;
 
   @ApiPropertyOptional()

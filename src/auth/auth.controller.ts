@@ -1,3 +1,4 @@
+import { RateLimit } from '../common/rate-limit/rate-limit.guard';
 import {
   Body,
   Controller,
@@ -44,6 +45,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @RateLimit({ limit: 10, windowSec: 15 * 60, bodyKey: 'email', overall: { limit: 30, windowSec: 15 * 60 } })
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'Login with email and password' })
@@ -95,6 +97,7 @@ export class AuthController {
   }
 
   @Public()
+  @RateLimit({ limit: 5, windowSec: 15 * 60, bodyKey: 'email', overall: { limit: 10, windowSec: 60 * 60 } })
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Request password reset link' })

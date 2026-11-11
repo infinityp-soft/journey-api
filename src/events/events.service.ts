@@ -23,11 +23,42 @@ const EVENT_INCLUDE = {
   formFields: { orderBy: { sortOrder: 'asc' as const } },
 } as const;
 
+/** Statuses the public website shows and accepts registrations for. */
+const OPEN_STATUSES: string[] = [EventStatus.scheduled, EventStatus.active];
+
+type DateLike = string | Date | null | undefined;
+const toTime = (v: DateLike) => (v ? new Date(v).getTime() : null);
+
+/** End must not be before start, and registration must close after it opens. */
+function assertDateOrder(d: {
+  eventStartAt?: DateLike;
+  eventEndAt?: DateLike;
+  registrationOpenAt?: DateLike;
+  registrationCloseAt?: DateLike;
+}) {
+  const start = toTime(d.eventStartAt), end = toTime(d.eventEndAt);
+  if (start !== null && end !== null && end < start) {
+    throw new BadRequestException('Event end must be after event start');
+  }
+  const open = toTime(d.registrationOpenAt), close = toTime(d.registrationCloseAt);
+  if (open !== null && close !== null && close < open) {
+    throw new BadRequestException('Registration close must be after registration open');
+  }
+}
+
+/** The meeting link is for registrants/staff — never send it to the public site. */
+function withoutOnlineUrl<T extends { onlineUrl?: string | null }>(row: T): Omit<T, 'onlineUrl'> {
+  const copy: Partial<T> = { ...row };
+  delete copy.onlineUrl;
+  return copy as Omit<T, 'onlineUrl'>;
+}
+
 @Injectable()
 export class EventsService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(dto: CreateEventDto) {
+    assertDateOrder(dto);
     const { formFields, ...rest } = dto;
     return this.prisma.event.create({
       data: {
@@ -89,7 +120,7 @@ export class EventsService {
       orderBy: { eventStartAt: 'asc' },
     });
     return rows.map((row) => ({
-      ...row,
+      ...withoutOnlineUrl(row),
       descriptionEn: htmlSummary(row.descriptionEn),
       descriptionTh: htmlSummary(row.descriptionTh),
     }));
@@ -105,7 +136,7 @@ export class EventsService {
       },
     });
     if (!event) throw new NotFoundException('Event not found');
-    return event;
+    return withoutOnlineUrl(event);
   }
 
   async findOne(id: string) {
@@ -118,7 +149,16 @@ export class EventsService {
   }
 
   async update(id: string, dto: UpdateEventDto) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    // Check the order against the values the event will have after the patch.
+    const pick = <K extends keyof typeof current & keyof UpdateEventDto>(k: K) =>
+      k in dto ? (dto[k] as DateLike) : (current[k] as DateLike);
+    assertDateOrder({
+      eventStartAt: pick('eventStartAt'),
+      eventEndAt: pick('eventEndAt'),
+      registrationOpenAt: pick('registrationOpenAt'),
+      registrationCloseAt: pick('registrationCloseAt'),
+    });
     const { formFields, ...rest } = dto;
     return this.prisma.event.update({
       where: { id },
@@ -175,6 +215,10 @@ export class EventsService {
 
   async register(eventId: string, dto: CreateEventRegistrationDto) {
     const event = await this.findOne(eventId);
+    // Only events the public site shows (scheduled / active) take sign-ups.
+    if (!OPEN_STATUSES.includes(event.status)) {
+      throw new BadRequestException('Registration is not open for this event');
+    }
     if (!event.registrationFormEnabled) {
       throw new BadRequestException('Registration is closed for this event');
     }

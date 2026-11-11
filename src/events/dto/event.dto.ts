@@ -7,14 +7,17 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsObject,
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { EventFormat, EventStatus, FormFieldType } from '../../common/enums';
+import { MaxJsonSize } from '../../common/validators/max-json-size.validator';
 
 export class EventFormFieldDto {
   @ApiProperty()
@@ -49,6 +52,7 @@ export class EventFormFieldDto {
 export class CreateEventDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   nameEn: string;
 
   @ApiPropertyOptional()
@@ -140,30 +144,37 @@ export class UpdateEventDto extends PartialType(CreateEventDto) {}
 export class CreateEventRegistrationDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
   firstName: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   lastName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsEmail()
+  @MaxLength(254)
   email?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   phone?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   areaOfInterest?: string;
 
   @ApiPropertyOptional({ type: 'object', additionalProperties: true })
   @IsOptional()
   @IsObject()
+  @MaxJsonSize(20_000, 60)
   answers?: Record<string, unknown>;
 }
