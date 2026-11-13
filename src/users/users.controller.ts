@@ -116,7 +116,10 @@ export class UsersController {
   @CheckPolicies(can(Action.Delete, 'User'))
   @ApiOperation({ summary: 'Delete a user' })
   @ApiNoContentResponse()
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.users.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() current: AuthUser,
+  ) {
+    return this.users.remove(id, current.id);
   }
 }

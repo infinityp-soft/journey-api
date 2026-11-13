@@ -82,8 +82,30 @@ export class UsersService {
     return sanitize(await this.findByIdRaw(id));
   }
 
+  /** Throws if the change would leave the system without an active admin. */
+  private async assertKeepsAnAdmin(target: { id: string; role: string; isActive: boolean }) {
+    if (target.role !== 'admin' || !target.isActive) return;
+    const others = await this.prisma.user.count({
+      where: { role: 'admin', isActive: true, id: { not: target.id } },
+    });
+    if (others === 0) {
+      throw new BadRequestException('Cannot remove, deactivate or demote the last active admin');
+    }
+  }
+
+  /** Signs the user out everywhere (their refresh tokens stop working). */
+  private revokeSessions(userId: string) {
+    return this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   async update(id: string, dto: UpdateUserDto) {
-    await this.findByIdRaw(id);
+    const current = await this.findByIdRaw(id);
+    const demoting = dto.role !== undefined && dto.role !== current.role;
+    const deactivating = dto.isActive === false && current.isActive;
+    if (demoting || deactivating) await this.assertKeepsAnAdmin(current);
     const { password, email, ...rest } = dto;
     if (email) {
       const clash = await this.prisma.user.findUnique({
@@ -101,6 +123,7 @@ export class UsersService {
       data,
       include: { avatar: true },
     });
+    if (demoting || deactivating) await this.revokeSessions(id);
     return sanitize(user);
   }
 
@@ -117,8 +140,12 @@ export class UsersService {
     return this.update(id, patch);
   }
 
-  async remove(id: string) {
-    await this.findByIdRaw(id);
+  async remove(id: string, actorId?: string) {
+    const target = await this.findByIdRaw(id);
+    if (actorId && actorId === id) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+    await this.assertKeepsAnAdmin(target);
     await this.prisma.user.delete({ where: { id } });
   }
 

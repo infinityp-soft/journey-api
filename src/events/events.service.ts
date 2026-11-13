@@ -214,28 +214,39 @@ export class EventsService {
   }
 
   async register(eventId: string, dto: CreateEventRegistrationDto) {
-    const event = await this.findOne(eventId);
-    // Only events the public site shows (scheduled / active) take sign-ups.
-    if (!OPEN_STATUSES.includes(event.status)) {
-      throw new BadRequestException('Registration is not open for this event');
-    }
-    if (!event.registrationFormEnabled) {
-      throw new BadRequestException('Registration is closed for this event');
-    }
-    if (event.maxRegistrants != null) {
-      const count = await this.prisma.eventRegistration.count({
-        where: { eventId },
-      });
-      if (count >= event.maxRegistrants) {
-        throw new BadRequestException('Event is full');
+    // One transaction with the event row locked, so concurrent sign-ups are
+    // counted one at a time and can't overshoot maxRegistrants.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM events WHERE id = ${eventId}::uuid FOR UPDATE`;
+      const event = await tx.event.findUnique({ where: { id: eventId } });
+      if (!event) throw new NotFoundException('Event not found');
+      // Only events the public site shows (scheduled / active) take sign-ups.
+      if (!OPEN_STATUSES.includes(event.status)) {
+        throw new BadRequestException('Registration is not open for this event');
       }
-    }
-    return this.prisma.eventRegistration.create({
-      data: {
-        ...dto,
-        eventId,
-        answers: (dto.answers ?? {}) as object,
-      },
+      if (!event.registrationFormEnabled) {
+        throw new BadRequestException('Registration is closed for this event');
+      }
+      const now = new Date();
+      if (event.registrationOpenAt && now < event.registrationOpenAt) {
+        throw new BadRequestException('Registration has not opened yet');
+      }
+      if (event.registrationCloseAt && now > event.registrationCloseAt) {
+        throw new BadRequestException('Registration is closed for this event');
+      }
+      if (event.maxRegistrants != null) {
+        const count = await tx.eventRegistration.count({ where: { eventId } });
+        if (count >= event.maxRegistrants) {
+          throw new BadRequestException('Event is full');
+        }
+      }
+      return tx.eventRegistration.create({
+        data: {
+          ...dto,
+          eventId,
+          answers: (dto.answers ?? {}) as object,
+        },
+      });
     });
   }
 

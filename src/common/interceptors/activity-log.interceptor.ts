@@ -5,9 +5,10 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { Observable, tap } from 'rxjs';
+import { from, Observable, switchMap, tap } from 'rxjs';
 import { ActivityLogsService } from '../../activity-logs/activity-logs.service';
 import { AuthUser } from '../../auth/casl/casl-ability.factory';
+import { PrismaService } from '../../prisma/prisma.service';
 
 const MUTATING = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
@@ -56,6 +57,21 @@ function recordName(body: unknown): string | undefined {
   return undefined;
 }
 
+/** Prisma delegate per URL root, used to read a record's name before it is deleted. */
+const DELEGATE_BY_ROOT: Record<string, string> = {
+  banners: 'banner',
+  staff: 'staffMember',
+  destinations: 'destination',
+  articles: 'article',
+  'article-categories': 'articleCategory',
+  'visa-services': 'visaService',
+  testimonials: 'testimonial',
+  videos: 'video',
+  events: 'event',
+  leads: 'lead',
+  users: 'user',
+};
+
 /** Sub-action from the path, e.g. /api/events/:id/status → "status". */
 function subAction(path: string): string | undefined {
   const segments = path
@@ -103,6 +119,7 @@ function menuFromPath(path: string): { entityType: string; summary: string } {
     settings: 'Global Settings',
     users: 'User Permissions',
     'media-assets': 'Media',
+    auth: 'Profile',
   };
 
   const label = labels[root] ?? root;
@@ -115,7 +132,23 @@ function menuFromPath(path: string): { entityType: string; summary: string } {
  */
 @Injectable()
 export class ActivityLogInterceptor implements NestInterceptor {
-  constructor(private readonly activity: ActivityLogsService) {}
+  constructor(
+    private readonly activity: ActivityLogsService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /** DELETE answers 204 with no body — read the record's name while it still exists. */
+  private async nameBeforeDelete(root: string, id: unknown): Promise<string | undefined> {
+    const delegateName = DELEGATE_BY_ROOT[root];
+    if (!delegateName || typeof id !== 'string' || !UUID_RE.test(id)) return undefined;
+    const delegate = (this.prisma as unknown as Record<string, { findUnique?: (args: unknown) => Promise<unknown> }>)[delegateName];
+    if (!delegate?.findUnique) return undefined;
+    try {
+      return recordName(await delegate.findUnique({ where: { id } }));
+    } catch {
+      return undefined;
+    }
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest<
@@ -138,8 +171,13 @@ export class ActivityLogInterceptor implements NestInterceptor {
 
     const { entityType, summary } = menuFromPath(path);
     const action = actionFromMethod(method);
+    const namePromise: Promise<string | undefined> =
+      method === 'DELETE'
+        ? this.nameBeforeDelete(entityType, req.params?.id)
+        : Promise.resolve(undefined);
 
-    return next.handle().pipe(
+    return from(namePromise).pipe(
+      switchMap((deletedName) => next.handle().pipe(
       tap({
         next: (body) => {
           const entityId =
@@ -150,8 +188,10 @@ export class ActivityLogInterceptor implements NestInterceptor {
               (body as { id: string }).id) ||
             (typeof req.params?.id === 'string' ? req.params.id : undefined);
 
-          const name = recordName(body);
-          const detail = subAction(path);
+          const name = recordName(body) ?? deletedName;
+          // "/auth/me" is the user's own profile — the label already says so.
+          const rawDetail = subAction(path);
+          const detail = entityType === 'auth' && rawDetail === 'me' ? undefined : rawDetail;
           const verb = `${action.charAt(0).toUpperCase()}${action.slice(1)}`;
           const text = [
             `${verb} ${summary}`,
@@ -171,6 +211,7 @@ export class ActivityLogInterceptor implements NestInterceptor {
             .catch(() => undefined);
         },
       }),
+      )),
     );
   }
 }
