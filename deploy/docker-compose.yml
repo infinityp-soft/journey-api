@@ -42,6 +42,11 @@ services:
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@journeyth-edu.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Super Administrator}
+      # อีเมล (Resend) — ใช้ส่งลิงก์รีเซ็ตรหัสผ่าน; ไม่ตั้ง RESEND_API_KEY = log ลง console อย่างเดียว
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # ลิงก์ในอีเมลรีเซ็ตรหัสผ่านชี้มาที่นี่ เช่น https://admin.example.com
+      WEB_ADMIN_BASE_URL: ${WEB_ADMIN_BASE_URL:-}
     healthcheck:
       test:
         [
