@@ -33,10 +33,12 @@ import {
   CreateEventDto,
   CreateEventRegistrationDto,
   UpdateEventDto,
+  UpdateEventPageDto,
 } from './dto/event.dto';
 import {
   EventDetailResponseDto,
   EventListItemResponseDto,
+  EventPageSettingsResponseDto,
   EventRegistrationResponseDto,
 } from './dto/event-response.dto';
 import { EventsService } from './events.service';
@@ -63,6 +65,33 @@ export class EventsController {
   @ApiPaginatedOkResponse(EventListItemResponseDto)
   findAll(@Query() query: EventQueryDto) {
     return this.service.findAll(query);
+  }
+
+  // --- Page settings (singleton) — declared before `public/:id` and `:id` ---
+  @Public()
+  @Get('page-settings/public')
+  @ApiOperation({ summary: 'Get Events page settings (public)' })
+  @ApiOkResponse({ type: EventPageSettingsResponseDto })
+  getPagePublic() {
+    return this.service.getPageSettings();
+  }
+
+  @Get('page-settings')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies(can(Action.Read, 'EventPageSettings'))
+  @ApiOperation({ summary: 'Get Events page settings' })
+  @ApiOkResponse({ type: EventPageSettingsResponseDto })
+  getPage() {
+    return this.service.getPageSettings();
+  }
+
+  @Patch('page-settings')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies(can(Action.Update, 'EventPageSettings'))
+  @ApiOperation({ summary: 'Update Events page settings (cover image)' })
+  @ApiOkResponse({ type: EventPageSettingsResponseDto })
+  updatePage(@Body() dto: UpdateEventPageDto) {
+    return this.service.updatePageSettings(dto);
   }
 
   /** Scheduled/active events for the marketing website. */

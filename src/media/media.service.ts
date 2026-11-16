@@ -27,6 +27,7 @@ const MEDIA_REFERENCES: Array<[string, string]> = [
   ['video_page_settings', 'header_image_id'],
   ['article_page_settings', 'header_image_id'],
   ['events', 'cover_image_id'],
+  ['event_page_settings', 'header_image_id'],
   ['site_settings', 'contact_cover_image_id'],
   ['site_settings', 'logo_id'],
 ];

@@ -191,3 +191,17 @@ export class EventRegistrationResponseDto {
   @ApiProperty({ type: String, format: 'date-time' })
   registeredAt: Date;
 }
+
+export class EventPageSettingsResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  headerImageId: string | null;
+
+  @ApiPropertyOptional({ type: MediaAssetResponseDto, nullable: true })
+  headerImage?: MediaAssetResponseDto | null;
+
+  @ApiProperty()
+  updatedAt: Date;
+}

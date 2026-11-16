@@ -15,6 +15,7 @@ import {
   CreateEventDto,
   CreateEventRegistrationDto,
   UpdateEventDto,
+  UpdateEventPageDto,
 } from './dto/event.dto';
 import { htmlSummary } from '../common/utils/html-summary';
 
@@ -256,5 +257,26 @@ export class EventsService {
     });
     if (!reg) throw new NotFoundException('Registration not found');
     await this.prisma.eventRegistration.delete({ where: { id: regId } });
+  }
+
+  /** Singleton settings for the public Events listing page (cover image). */
+  async getPageSettings() {
+    const existing = await this.prisma.eventPageSettings.findFirst({
+      include: { headerImage: true },
+    });
+    if (existing) return existing;
+    return this.prisma.eventPageSettings.create({
+      data: {},
+      include: { headerImage: true },
+    });
+  }
+
+  async updatePageSettings(dto: UpdateEventPageDto) {
+    const settings = await this.getPageSettings();
+    return this.prisma.eventPageSettings.update({
+      where: { id: settings.id },
+      data: dto,
+      include: { headerImage: true },
+    });
   }
 }
