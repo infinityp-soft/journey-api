@@ -178,3 +178,10 @@ export class CreateEventRegistrationDto {
   @MaxJsonSize(20_000, 60)
   answers?: Record<string, unknown>;
 }
+
+export class UpdateEventPageDto {
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID()
+  headerImageId?: string | null;
+}

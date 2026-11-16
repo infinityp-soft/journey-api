@@ -28,6 +28,7 @@ export type AppSubject =
   | 'Event'
   | 'EventFormField'
   | 'EventRegistration'
+  | 'EventPageSettings'
   | 'Lead'
   | 'SiteSettings'
   | 'SocialLink'
@@ -57,5 +58,6 @@ export const EDITOR_CONTENT_SUBJECTS: AppSubject[] = [
   'Event',
   'EventFormField',
   'EventRegistration',
+  'EventPageSettings',
   'Lead',
 ];
