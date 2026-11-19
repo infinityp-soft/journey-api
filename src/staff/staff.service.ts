@@ -1,3 +1,4 @@
+import { StaffStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { BasePrismaService } from '../common/crud/base-prisma.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,10 +22,11 @@ export class StaffService extends BasePrismaService {
     return [{ sortOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }];
   }
 
-  /** Visible staff members for the marketing website, unpaginated. */
+  /** Active staff members for the marketing website, unpaginated. */
   findPublic() {
     return this.model.findMany({
-      where: { isVisible: true },
+      // The admin's Active/Inactive switch decides who the website shows.
+      where: { status: StaffStatus.active },
       include: this.options.include,
       orderBy: this.defaultOrderBy,
     });
