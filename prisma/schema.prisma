@@ -445,6 +445,8 @@ model ArticlePageSettings {
 
 model EventPageSettings {
   id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageTitleEn   String?     @map("page_title_en")
+  pageTitleTh   String?     @map("page_title_th")
   headerImageId String?     @map("header_image_id") @db.Uuid
   headerImage   MediaAsset? @relation(fields: [headerImageId], references: [id], onDelete: SetNull)
   isSingleton   Boolean     @unique @default(true) @map("is_singleton")

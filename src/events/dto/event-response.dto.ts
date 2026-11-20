@@ -196,6 +196,12 @@ export class EventPageSettingsResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
+  @ApiPropertyOptional({ nullable: true })
+  pageTitleEn: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  pageTitleTh: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   headerImageId: string | null;
 
