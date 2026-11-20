@@ -1,6 +1,7 @@
 # Journey API context
 
 ## Current Status
+- 2026-11-20: migration `20261120120000_article_page_titles` adds nullable `page_title_en` / `page_title_th` to `article_page_settings` (same as events); `PATCH /articles/page-settings` accepts `pageTitleEn` / `pageTitleTh` (max 200, null/empty = website default text). Apply with `sh migrate.sh` before deploying admin/web.
 - 2026-11-20: migration `20261120000000_event_page_titles` adds nullable `page_title_en` / `page_title_th` to `event_page_settings`; `PATCH /events/page-settings` accepts `pageTitleEn` / `pageTitleTh` (max 200, null/empty = website default text). Apply with `sh migrate.sh` before deploying admin/web.
 - 2026-11-19 Staff: the website lists Active staff only — `GET /staff/public` filters `status = active` (was `isVisible`). Migration `20261119000000_staff_status_from_visibility` sets `status = inactive` for staff that were hidden with the old switch (`is_visible = false`), so nobody reappears. **Needs `sh migrate.sh` before `sh deploy.sh api`.** Not committed or deployed.
 - 2026-11-16: migration `20261116000000_event_page_settings` adds the `event_page_settings` singleton (cover image for the public Events page, same shape as `article_page_settings`) with `GET /events/page-settings/public`, `GET/PATCH /events/page-settings` (CASL subject `EventPageSettings`, editor-manageable) and media GC reference. Apply the migration (`sh migrate.sh`) before deploying the admin/web changes.

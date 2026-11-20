@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { PublishStatus } from '../../common/enums';
@@ -131,6 +132,19 @@ export class UpdateArticleCategoryDto extends PartialType(
 ) {}
 
 export class UpdateArticlePageDto {
+  /** Hero title on the public Articles page; null/empty falls back to the site's default text. */
+  @ApiPropertyOptional({ nullable: true, maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pageTitleEn?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pageTitleTh?: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   @IsOptional()
   @IsUUID()
