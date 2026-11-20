@@ -273,9 +273,16 @@ export class EventsService {
 
   async updatePageSettings(dto: UpdateEventPageDto) {
     const settings = await this.getPageSettings();
+    // Blank titles are stored as null so the website falls back to its default text.
+    const title = (value?: string | null) =>
+      value === undefined ? undefined : value?.trim() || null;
     return this.prisma.eventPageSettings.update({
       where: { id: settings.id },
-      data: dto,
+      data: {
+        ...dto,
+        pageTitleEn: title(dto.pageTitleEn),
+        pageTitleTh: title(dto.pageTitleTh),
+      },
       include: { headerImage: true },
     });
   }

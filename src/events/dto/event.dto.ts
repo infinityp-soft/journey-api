@@ -180,6 +180,19 @@ export class CreateEventRegistrationDto {
 }
 
 export class UpdateEventPageDto {
+  /** Hero title on the public Events page; null/empty falls back to the site's default text. */
+  @ApiPropertyOptional({ nullable: true, maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pageTitleEn?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pageTitleTh?: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   @IsOptional()
   @IsUUID()
