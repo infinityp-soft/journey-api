@@ -87,6 +87,9 @@ export class ArticleResponseDto {
   @ApiProperty()
   isVisible: boolean;
 
+  @ApiProperty()
+  isPinned: boolean;
+
   @ApiPropertyOptional({ nullable: true })
   readTimeMinutes: number | null;
 
