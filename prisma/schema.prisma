@@ -353,6 +353,8 @@ model Article {
   featuredImage   MediaAsset?      @relation(fields: [featuredImageId], references: [id], onDelete: SetNull)
   status          PublishStatus    @default(draft)
   isVisible       Boolean          @default(true) @map("is_visible")
+  /// Pinned articles are listed first on the public site.
+  isPinned        Boolean          @default(false) @map("is_pinned")
   readTimeMinutes Int?             @map("read_time_minutes")
   seoTitle        String?          @map("seo_title")
   seoDescription  String?          @map("seo_description")

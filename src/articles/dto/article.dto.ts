@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsInt,
   IsOptional,
@@ -80,6 +81,20 @@ export class CreateArticleDto {
   @IsOptional()
   @IsBoolean()
   isVisible?: boolean;
+
+  @ApiPropertyOptional({ description: 'Listed first on the public site' })
+  @IsOptional()
+  @IsBoolean()
+  isPinned?: boolean;
+
+  @ApiPropertyOptional({
+    format: 'date-time',
+    nullable: true,
+    description: 'Date shown on the site and used for ordering; may be in the past. Defaults to the time it is first published.',
+  })
+  @IsOptional()
+  @IsDateString()
+  publishedAt?: string | null;
 
   @ApiPropertyOptional({ example: 5 })
   @IsOptional()

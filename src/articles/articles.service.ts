@@ -44,8 +44,12 @@ export class ArticlesService {
     const data: Record<string, unknown> = {
       ...dto,
       slug,
-      publishedAt:
-        dto.status === PublishStatus.published ? new Date() : null,
+      // A date chosen in the admin (e.g. back-dated news) wins; otherwise "now" when published.
+      publishedAt: dto.publishedAt
+        ? new Date(dto.publishedAt)
+        : dto.status === PublishStatus.published
+          ? new Date()
+          : null,
     };
 
     if (dto.categoryId) {
@@ -102,7 +106,12 @@ export class ArticlesService {
     const rows = await this.prisma.article.findMany({
       where: { status: PublishStatus.published, isVisible: true, destinationId: query.destinationId },
       include: PUBLIC_ARTICLE_INCLUDE,
-      orderBy: { createdAt: 'desc' },
+      // Pinned first, then by the published date set in the admin (newest first).
+      orderBy: [
+        { isPinned: 'desc' },
+        { publishedAt: { sort: 'desc', nulls: 'last' } },
+        { createdAt: 'desc' },
+      ],
       // Public lists are paginated after client-side search/filtering.
     });
     return rows.map(({ contentEn: _en, contentTh: _th, ...rest }) => rest);
@@ -145,13 +154,18 @@ export class ArticlesService {
   async update(id: string, dto: UpdateArticleDto) {
     const article = await this.findOne(id);
     const data: Record<string, unknown> = { ...dto };
+    if (dto.publishedAt !== undefined) {
+      data.publishedAt = dto.publishedAt ? new Date(dto.publishedAt) : null;
+    }
     if (dto.slug && dto.slug !== article.slug) {
       data.slug = await this.uniqueSlug(dto.slug, id);
     }
+    // Publishing without any date (none sent, none stored) stamps "now".
+    const nextPublishedAt =
+      dto.publishedAt !== undefined ? data.publishedAt : article.publishedAt;
     if (
-      dto.status === PublishStatus.published &&
-      article.status !== PublishStatus.published &&
-      !article.publishedAt
+      (dto.status ?? article.status) === PublishStatus.published &&
+      !nextPublishedAt
     ) {
       data.publishedAt = new Date();
     }
